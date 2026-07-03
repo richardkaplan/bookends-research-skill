@@ -111,20 +111,17 @@ and configure it first, alongside the **bookends-mcp**.
 ## Reading the deep links (known Bookends viewer behavior)
 
 Every highlighted quote is a `bookends://` link to the exact passage in the source PDF.
-**How you open one depends on where you're reading the report:**
+**To follow a `bookends://` deep link, open the report in a web browser** — either
+double-click the attached `.html` in Bookends (it opens in your default browser) or open
+the iCloud copy in Safari/Chrome (the report is saved to `RESEARCH_DIR` in step 7 for
+exactly this). The browser hands the `bookends://` scheme to macOS, which routes it back
+to Bookends and jumps to the highlighted passage.
 
-- **In a web browser (Safari/Chrome):** click the link normally. The browser hands the
-  `bookends://` scheme to macOS Launch Services, which routes it back to Bookends and
-  opens the PDF at the highlighted passage. The report is saved to the iCloud
-  `RESEARCH_DIR` (step 7) precisely so it can be opened in a browser.
-- **Inside Bookends' built-in HTML/PDF viewer:** a normal left-click looks dead. The
-  embedded WebKit view navigates ordinary `http(s)` links itself but does **not** hand a
-  custom `bookends://` app-scheme link to macOS Launch Services on a left-click — so the
-  deep links appear not to work even though they are correct. Reach them by
-  **right-clicking the link and choosing Open** from the contextual menu (per the
-  Bookends User Guide).
-- **Ordinary web links** (PMC / open-access URLs) work on a normal left-click in both
-  places.
+**Bookends' built-in preview pane cannot follow `bookends://` links on any click** — not
+on a left-click and not on a right-click. Its embedded WebKit viewer follows ordinary
+`http(s)` links itself but never hands a custom `bookends://` app-scheme link to macOS, so
+the deep links appear dead there even though they are correct. Ordinary web links (PMC /
+open-access URLs) work everywhere.
 
 Because of this, **every generated report must carry a short version of this note near
 the top** — see the "How to open the deep links" line in step 6.
@@ -333,11 +330,13 @@ Executive Summary — up-front bottom-line (4–8 sentences): what the evidence 
  the deep links"    Summary or the "How to read" line). Reproduce this wording (resolve
                     RESEARCH_DIR to the real folder in the rendered report): "Each
                     highlighted quote links (bookends://) to the exact passage in the
-                    source PDF. To follow a link: open this report in a web browser (it's
-                    also saved to your iCloud RESEARCH_DIR for that), or, inside Bookends,
-                    right-click the link and choose Open — Bookends' built-in viewer
-                    doesn't follow custom bookends:// links on a normal click. Ordinary
-                    web links work in both places."
+                    source PDF. To follow a bookends:// deep link, open this report in a
+                    web browser — either double-click the attached .html in Bookends (it
+                    opens in your default browser) or open the iCloud copy in
+                    Safari/Chrome. The browser hands the bookends:// scheme to macOS,
+                    which routes it back to Bookends and jumps to the highlighted
+                    passage. Bookends' built-in preview pane cannot follow bookends://
+                    links on any click; ordinary web links work everywhere."
 PART I — Literature Package
   Introduction    — topic framing + the stance legend
   Summary / Source-type Table — Article (BOLD native bookends:// link) · one-sentence

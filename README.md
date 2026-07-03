@@ -167,19 +167,19 @@ child agents can then load **Bookends Research Skill** without any per-session s
 ## Notes / Known behavior
 
 **Opening the `bookends://` deep links.** Every highlighted quote links to the exact
-passage in the source PDF via a `bookends://` deep link. How you follow the link depends
-on where you read the report:
+passage in the source PDF via a `bookends://` deep link. **To follow one, open the report
+in a web browser** — either double-click the attached `.html` in Bookends (it opens in
+your default browser) or open the iCloud copy in Safari/Chrome:
 
 - **In a web browser (Safari/Chrome):** click normally — the browser passes the
-  `bookends://` scheme to macOS Launch Services, which routes it back to Bookends and
-  opens the PDF at the highlighted passage. (The report is also saved to your iCloud
-  `RESEARCH_DIR`, so you always have a browser-openable copy.)
-- **Inside Bookends' built-in viewer:** a normal left-click looks dead. Bookends'
-  embedded WebKit viewer follows ordinary `http(s)` links itself but does not hand a
-  custom `bookends://` link to Launch Services on a left-click, so the deep links appear
-  not to work even though they are correct. Reach them by **right-clicking the link and
-  choosing Open** (per the Bookends User Guide).
-- **Ordinary web links** (PMC / open-access URLs) work on a normal click in both places.
+  `bookends://` scheme to macOS, which routes it back to Bookends and opens the PDF at the
+  highlighted passage. (The report is also saved to your iCloud `RESEARCH_DIR`, so you
+  always have a browser-openable copy.)
+- **Bookends' built-in preview pane cannot follow `bookends://` links on any click** —
+  not on a left-click and not on a right-click. Its embedded WebKit viewer follows
+  ordinary `http(s)` links itself but never hands a custom `bookends://` link to macOS, so
+  the deep links there appear dead even though they are correct.
+- **Ordinary web links** (PMC / open-access URLs) work on a normal click everywhere.
 
 Each generated report includes a short version of this note near the top.
 

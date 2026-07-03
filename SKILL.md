@@ -1,0 +1,303 @@
+---
+name: bookends-research-skill
+description: "Produce a Bookends-native, deep-linked, highlighted research report on ANY topic — the exact pipeline behind the 'excellent' Priapism deep-linked report, parameterized so only the RESEARCH TOPIC changes each run. Creates a new Bookends group named for the topic with topic-appropriate subtopic child groups (always including a Reports folder), finds authoritative sources (guidelines, systematic reviews, key primary studies) via Firecrawl Research / PubMed, attaches full-text PDFs (or flagged abstract-only PDFs) to Bookends references, writes one persistent highlight + page-accurate bookends:// deep link per source, sorts each reference into its subtopic, and assembles ONE combined styled HTML report (executive summary; per-article cards with inline highlighted deep-linked verbatim quotes; stance/source-type table; internally navigable narrative synthesis; Word-ready Academic Summary; and a References section in VANCOUVER format). Saves the report into Bookends (Reports subgroup, HTML attached, label = AI content) AND to iCloud. Use this skill whenever the user asks for a Bookends research report, a deep-linked / highlighted literature review, an evidence synthesis or annotated bibliography built in Bookends, or says things like 'run the Bookends research skill on <topic>', 'deep-link report in Bookends', 'bookends:// deep-linked quotes', or 'do a <topic> report like the priapism one'. Depends on the bookends-mcp and the pdf-highlight-and-deep-link MCP."
+---
+
+# Bookends Research Skill
+
+This skill reproduces **exactly** the workflow and report format of the Priapism
+deep-linked Bookends project — the report the user called "excellent" — **parameterized
+so that only the RESEARCH TOPIC changes from run to run.** Everything else stays
+identical, with **one deliberate format change**: the citation list at the end is
+titled **"References"** (not "Works Cited") and is formatted in **Vancouver** style.
+
+Every claim in the finished report is traceable: each verbatim quotation is a
+hyperlink that opens the source PDF **in Bookends at the exact highlighted passage**
+(page-accurate `bookends://` deep link), with a persistent highlight already written
+into the PDF. The report fuses a **literature package** (executive summary, stance
+table, per-article summary cards each embedding 1–3 highlighted, deep-linked quotes)
+with an **academic narrative synthesis** (a navigable, multi-section argument whose
+quotations deep-link to their highlights), closing with a **Word-ready Academic
+Summary** and a **Vancouver References** list.
+
+**By default everything is COMBINED into one HTML document.** Only split into
+separate deliverables if the user explicitly asks for it.
+
+---
+
+## Home is Bookends (always)
+
+This skill is Bookends-native. The PDFs live as **attachments on Bookends
+references**; deep links are **`bookends://…` page/selection links**. Drive Bookends
+through its MCP (`mcp__bookends-mcp__*`) and the highlight/deep-link MCP
+(`mcp__pdf-highlight-and-deep-link__*`) — **never** through screen automation.
+
+**Dependency.** This skill requires the **pdf-highlight-and-deep-link MCP**
+(`github.com/richardkaplan/pdf-highlight-and-deep-link-mcp`), which does the
+quote-location, highlight-writing, and `bookends://` deep-link generation. Install
+and configure it first, alongside the **bookends-mcp**.
+
+---
+
+## Interpreting the invocation — parse, then expand
+
+Treat the user request as a terse one-liner to parse and auto-expand. The user
+normally types ONE line, e.g. `Run the Bookends Research Skill on Ischemic Priapism`
+or `Bookends deep-link report on Efficacy of Epidural Steroid Injections`.
+
+**Parse ONE thing: the TOPIC.** Everything else is fixed by this skill.
+
+- **TOPIC / question** — the subject of the report. This is the only variable. If no
+  topic is given, that is the single field you cannot guess — ask for it. Otherwise
+  **do not ask permission to proceed**; run the whole pipeline end-to-end.
+- **SEARCH SOURCE** defaults to **Firecrawl Research / PubMed** (open-access
+  full-text). Honor an explicitly named alternative if the user gives one.
+- **STORAGE** is always **Bookends** (plus the iCloud copy in step 7). Non-negotiable
+  for this skill.
+- If the user names a specific reference count, honor it; otherwise target **≥25**
+  quality sources when the literature supports it (see step 2).
+
+Having parsed the TOPIC, execute the numbered **End-to-end workflow** below in order.
+
+---
+
+## Standing rules (honor on every run)
+
+- **Create-new, never-trash.** Never delete or trash any reference, attachment,
+  group, or prior report. When regenerating, save the new report as a new record and
+  leave the prior one in place.
+- **Label = AI content.** The finished report record carries the user's **AI-content
+  label** (label 3 / "AI Content"). Never tag the report.
+- **Repurpose-in-place on a bad DOI.** If a DOI/PMID resolves to the WRONG paper,
+  **repurpose that record in place** — overwrite its fields with the correct metadata
+  and re-attach the correct PDF. **Never trash it** and create a fresh one; editing in
+  place avoids orphaned attachments and preserves ids/links.
+- **Bookends AppleScript bridge quirks (bake these in).** The Bookends AppleScript
+  bridge **rejects the `volume` field** on write and **rejects any value containing
+  parentheses**. Therefore: store the issue number in a parenthesis-free way (e.g. put
+  `25` and `2` where the model expects `25(2)`, or place the issue in a field that
+  accepts it) and **never** write a value that contains `(` or `)` through the bridge.
+  The **citations in the report itself must still render correctly** — reconstruct the
+  full `volume(issue)` in the report text and in the Vancouver References list from the
+  stored parts; only the write-through-the-bridge value is parenthesis-free. Prefer the
+  dedicated `bookends_set_field` / `bookends_quick_add` tools over raw AppleScript; fall
+  back to `bookends_applescript_run` only when no dedicated tool fits, and keep every
+  written value parenthesis-free.
+- **Idempotent + resumable.** Every step is idempotent — on a transient error retry the
+  failed item; never start over and never create duplicates (look a record up by
+  DOI/PMID/title before adding).
+
+---
+
+## The five format rules (canonical — reproduce exactly every run)
+
+The report MUST reproduce the Priapism report's structure and follow these five rules.
+
+1. **Per-article summaries carry 1–3 highlighted, hyperlinked quotes woven INLINE.**
+   Each article's summary card embeds 1–3 exact verbatim quotes from *that* article.
+   Each quote is (a) highlighted in the attached PDF via the pdf-highlight MCP (the
+   call is idempotent — an identical highlight is reused) and (b) rendered as an active
+   hyperlink to its exact-passage `bookends://` deep link. **Weave each quoted phrase
+   directly into the running sentence** so reading the paragraph carries you through
+   the quote (e.g. *…the panel concluded ischemic priapism is "a compartment syndrome"
+   requiring emergent decompression [link], which is why…*). **Never** stack quotes as
+   detached block-quotes. This inline-weave rule applies to BOTH the Part I summary
+   cards and the Part II narrative. Style the span as both a highlight (light
+   background) and a bold link.
+2. **In-report source links are NATIVE `bookends://` links, never a web proxy.** Link
+   every source inside the report with a direct `bookends://…` link (the report opens
+   on the Mac, so native links resolve). Web-only sources → the article URL (e.g. PMC).
+3. **Source links are typographically obvious.** Render every link-to-source
+   (`bookends://`, PMC / open-access URL) **bold** and visibly link-styled (color +
+   underline). Apply consistently to inline quote links, per-article citation links,
+   and the summary table.
+4. **Close with a Word-ready "Academic Summary," then a "References" list.** The
+   **Academic Summary** is a high-level but detailed narrative that synthesizes ALL
+   positions (supportive, equivocal, and not-supportive findings across every article)
+   in flowing scholarly prose, using **in-text parenthetical author–year citations** as
+   **plain text — NOT hyperlinks** (so nothing breaks when pasted into Microsoft Word).
+   It must be clean Rich Text (normal paragraphs/headings, plain bold/italic).
+   **Immediately after it, include a section titled `References` (NOT "Works Cited")
+   formatted in Vancouver style** — numbered, in citation order, plain text. *(This
+   References/Vancouver section is the ONE deliberate change from the original Priapism
+   template, which ended with a "Works Cited" list.)*
+5. **The narrative synthesis is internally navigable.** Open Part II with a short table
+   of contents whose items are **internal in-document links** (`<a href="#sec-N">`) to
+   numbered sections, each carrying a **stable anchor id** (`<h2 id="sec-N">N. …</h2>`).
+   These `#sec-N` links live only in the narrative — distinct from the external quote
+   deep links (rule 1) and the native source links (rule 2). Do **not** put internal
+   section links in the Academic Summary or References (they stay Word-ready plain text).
+
+---
+
+## End-to-end workflow
+
+Do these in order. Idempotent and resumable throughout.
+
+### 1. Create the Bookends group + topic-appropriate subtopic child groups
+
+Create a **NEW Bookends group named for the topic**, e.g. `<Topic> — Deep-Linked
+Report`. Inside it, create **subtopic child groups that are natural for THIS topic** —
+derive them from the topic's own structure, do not copy the priapism labels verbatim.
+**Always include a `Reports` child group** (the finished report is filed there).
+
+**Derive the subtopics from the topic.** Look at how the literature on the topic is
+actually organized and mirror it. For reference, the priapism run used:
+`Causes & Etiology` · `Diagnosis` · `Treatment (Ischemic)` ·
+`Treatment (Non-ischemic / High-flow)` · `Stuttering / Recurrent` ·
+`Prognosis & Outcomes` · `Reports`. For a **different** topic, produce the analogous
+natural breakdown (typically some mix of *Etiology/Pathophysiology*,
+*Diagnosis/Assessment*, one or more *Treatment/Management* buckets split by the axis
+that matters for that topic, *Special populations / subtypes*, *Prognosis / Outcomes*,
+plus **Reports**). Aim for ~4–8 subtopics.
+
+**Bookends group mechanics (do not skip):**
+- Create with `mcp__bookends-mcp__bookends_groups { action: "create", name, parent }`.
+- **Bookends group names are GLOBALLY UNIQUE.** A bare subtopic name like `Diagnosis`
+  or `Reports` will collide with another project's group and raise a
+  global-unique-name error. **Project-qualify every name**, e.g.
+  `<Topic> — Diagnosis`, `<Topic> — Reports`, so it is unique across the whole library.
+- Create the parent group first, then each child with `parent` set to the parent's
+  unique name. **Verify real nesting/containment** afterwards with
+  `bookends_groups { action: "get" }` — confirm each child actually reports the parent
+  as its container (a flat set of same-named groups is a failure; fix it before moving
+  on).
+- Record each group's id.
+
+### 2. Find authoritative sources
+
+Gather a stance-balanced set of authoritative sources on the topic — **clinical
+practice guidelines, systematic reviews / meta-analyses, and key primary studies** —
+via **Firecrawl Research** (`firecrawl-research-index` skill /
+`mcp__mcp-server-firecrawl__firecrawl_research_*`) and/or **PubMed**. Prefer
+**open-access full-text PDFs** spanning supportive, equivocal, and critical findings.
+**Target ≥25 references** when that many quality sources exist; favor reviews,
+meta-analyses, and guidelines first. Gather fewer only when the literature genuinely
+does not support 25 — and say so explicitly. Honor an explicit user count if given.
+
+### 3. Attach PDFs to Bookends references
+
+For each source, create/locate the reference and attach its PDF:
+- **De-duplicate first:** `mcp__bookends-mcp__bookends_search` by DOI/PMID/title.
+- **Add by identifier:** `mcp__bookends-mcp__bookends_quick_add` (by **DOI/PMID/arXiv**)
+  pulls metadata (and full text where Bookends can retrieve it).
+- **Attach a downloaded full-text PDF:**
+  `mcp__pdf-highlight-and-deep-link__bookends_attach_pdf { id, pdfPath }`, or
+  `mcp__bookends-mcp__bookends_add_pdf` for local files / direct PDF URLs / identifier-
+  based retrieval.
+- **No accessible full text?** Attach a rendered **abstract PDF** with
+  `mcp__pdf-highlight-and-deep-link__bookends_attach_abstract_pdf` and **flag it
+  abstract-only** in the report (its quote is an abstract key sentence, not a full-text
+  deep link).
+- Record each reference's Bookends **id** — it is the locator for highlighting,
+  linking, and filing. Respect the AppleScript-bridge quirks in *Standing rules* when
+  writing any field (no `volume` write, no parentheses).
+
+### 4. One persistent highlight + page-accurate deep link per source
+
+For each source, pick a **verbatim, contiguous** key sentence (full-text sentence for
+full-text PDFs; the abstract's key sentence for abstract-only). Then:
+
+```
+mcp__pdf-highlight-and-deep-link__pdf_link_for_quote
+  params: { "locator": "<bookends id or bookends:// URL>", "quote": "<verbatim fragment>" }
+```
+
+It writes a persistent highlight into the attached PDF (keeping a one-time `.bak`) and
+returns a **page-accurate** `bookends://…/selection/<Library>/<id>/0/<page>/0/0/0/0`
+link. Bookends resolves this to the correct page of the correct attachment (it ignores
+fabricated sentence-level coordinates — that is expected). Use the returned
+`bookends://…` link verbatim as the `href` for that quote.
+
+Tips that save reruns: if a quote returns `found:false`, the PDF has irregular spacing
+— shorten to a cleaner, distinctive sub-fragment (or call `pdf_get_layout` to read the
+real token stream) and retry; don't abandon the article, pick another verbatim
+sentence that makes the same point. The call is idempotent. Ensure **every** article
+ends with **1–3 highlighted quotes** (the per-article cards each need 1–3).
+
+### 5. Sort each reference into its subtopic folder + classify stance
+
+File each reference into the correct subtopic child group with
+`mcp__bookends-mcp__bookends_groups { action: "add_references", name: "<Topic> — <Subtopic>", reference_ids: [...] }`.
+Give each article a stance label appropriate to the question (for an efficacy/clinical
+review: **Supportive / Equivocal / Not supportive**), based on what the paper actually
+concludes, not its title. Keep a running tally for the stance table.
+
+### 6. Build ONE combined styled HTML report
+
+Assemble a single self-contained HTML document (inline `<style>`) with the SAME
+sections as the Priapism report, in this order, applying all five format rules:
+
+```
+Header            — title, subtitle, prepared-date, one line on the evidence base
+Executive Summary — up-front bottom-line (4–8 sentences): what the evidence shows, the
+                    stance tally, and the single most important caveat. A reader can
+                    stop here and know the answer.
+"How to read"     — 2–4 sentences: three parts under one cover; quotes deep-link to
+                    Bookends highlights; in-report links are native bookends:// + bold;
+                    closes with a Word-ready Academic Summary and a Vancouver References
+                    list.
+PART I — Literature Package
+  Introduction    — topic framing + the stance legend
+  Summary / Source-type Table — Article (BOLD native bookends:// link) · one-sentence
+                    summary · Journal · Year · Source type (guideline / systematic
+                    review / RCT / etc.) · Stance pill + a tally line
+  Article-by-Article Summaries — one card per paper: title + stance pill, full citation
+                    (open-access link + BOLD native bookends:// copy link), a 3–5
+                    sentence factual summary with 1–3 HIGHLIGHTED, deep-linked verbatim
+                    quotes WOVEN INLINE (never stacked). Abstract-only sources flagged.
+PART II — Scholarly Synthesis (Deep-Linked)
+  Navigable TOC of INTERNAL <a href="#sec-N"> links over numbered sections, each with a
+  stable <h2 id="sec-N"> anchor. Then the multi-section narrative: EVERY quotation is an
+  INLINE highlighted span woven into the prose — a BOLD link to its bookends:// exact-
+  passage deep link, never a detached block-quote. A reasoned conclusion.
+Academic Summary  — flowing narrative synthesizing ALL positions with in-text
+                    (Author, Year) citations as PLAIN TEXT (no hyperlinks); Word-ready
+                    Rich Text.
+References         — titled "References" (NOT "Works Cited"), formatted in VANCOUVER
+                    style: numbered, citation order, plain text, no hyperlinks.
+Footer            — provenance, non-PHI note, "verify against primary sources", not
+                    medical/legal advice.
+```
+
+Use the report's visual language: colored stance pills and inline highlighted quote
+spans (light highlight background + bold link styling). Generate the **Vancouver
+References** either by hand or via
+`mcp__bookends-mcp__bookends_get_formatted_reference` with a Vancouver style — but
+reconstruct any `volume(issue)` from the parenthesis-free stored parts so the printed
+citation is correct (per *Standing rules*).
+
+### 7. Save the report — Bookends AND iCloud
+
+- **Bookends:** file the finished HTML into the **`<Topic> — Reports` subgroup** with
+  the report's PDF/HTML **attached to a report reference**, and set the record's **AI-
+  content label (label 3)**. Never tag it; never trash the prior report (move nothing to
+  trash — if regenerating, add the new one alongside). Name it with an ` (AI)` suffix,
+  e.g. `<Topic> — Deep-Linked Report (AI)`.
+- **iCloud:** also save the SAME HTML to iCloud at
+  `Research/<Topic> — Deep-Linked Report/<Topic> — Deep-Linked Report (AI) <date>.html`
+  (create the folder if needed; `<date>` = today's date). This satisfies the standing
+  rule that researched results are saved as a formatted HTML file in iCloud.
+
+### 8. Report back
+
+Give the user the report's name, its native `bookends://` link, the iCloud path, the
+stance tally, and the total number of quotes highlighted and deep-linked (per-article
+cards + narrative). Confirm the Bookends group + subtopic tree was created and verified.
+
+---
+
+## Reference file
+
+- `references/bookends.md` — exact Bookends import/attach/highlight/deep-link calls,
+  the `bookends://` selection-link scheme, Vancouver formatting via
+  `bookends_get_formatted_reference`, the AppleScript-bridge `volume`/parentheses
+  workaround, group global-unique-name handling, and the label-AI / never-trash rules.
+
+---
+
+## Credits
+
+**Richard S. Kaplan, MD** — Kaplan Life Care Planning. Author and maintainer.
+- Email: rkaplan@kaplanlifecareplan.com
+- Website: https://kaplanlifecareplan.com/

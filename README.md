@@ -46,6 +46,73 @@ Say things like:
 
 The topic is the only variable — everything else is fixed by the skill.
 
+## Example output
+
+Screenshots from a real run — *"Is Surgery Effective for Low Back Pain?"* (every source
+is published literature; no PHI):
+
+![Top of the report — title, executive summary, and the "how to open the deep links" note](examples/screenshots/01-executive-summary.png)
+
+*Top of the report: the title banner, the bottom-line executive summary with the stance
+tally, and the "how to open the deep links" note.*
+
+![Stance / source-type summary table](examples/screenshots/02-stance-table.png)
+
+*The Part I summary table — one row per study with a one-line finding, journal, source
+type, and a colored stance pill.*
+
+![A per-article card with an inline highlighted, deep-linked quote](examples/screenshots/03-article-card.png)
+
+*A per-article summary card: the verbatim quote is highlighted and is a bold `bookends://`
+deep link ("Open in Bookends") to the exact passage in the source PDF.*
+
+![The Vancouver-style References section](examples/screenshots/04-references.png)
+
+*The closing References list, numbered in citation order and formatted in Vancouver
+style.*
+
+## What you can use this for
+
+The topic is the only variable, so this skill works for **any question that has a
+literature** — clinical or not. Invoke it as **`Run the Bookends Research Skill on
+<your question>`**. Ready examples:
+
+- **Clinical evidence syntheses / treatment-efficacy reviews** — *"Is surgery effective
+  for chronic low back pain?"*, *"Efficacy of epidural steroid injections for lumbar
+  radiculopathy"*, *"Does physical therapy prevent recurrent ankle sprains?"*
+- **Drug / therapy comparisons** — *"Suzetrigine vs opioids for acute pain"*, *"SGLT2
+  inhibitors vs GLP-1 receptor agonists for CKD outcomes"*, *"DOACs vs warfarin in
+  atrial fibrillation"*.
+- **Prognosis / natural-history / life-expectancy questions** — *"Life expectancy after
+  severe TBI with disorders of consciousness"*, *"Influence of level of nursing care on
+  life expectancy after stroke"*, *"Natural history of untreated lumbar disc
+  herniation"*.
+- **Diagnosis / work-up reviews** — *"Work-up of secondary hypertension"*, *"Diagnostic
+  accuracy of D-dimer for pulmonary embolism"*.
+- **Complication / adverse-event profiles** — *"Adverse-event profile of long-term PPI
+  use"*, *"Complication rates of lumbar fusion"*.
+- **Standard-of-care questions** — *"Standard of care for diabetic foot ulcer
+  management"*, *"Guideline-recommended management of sepsis"*.
+- **Medical-legal / life-care-planning evidence packs & expert-report support** — build a
+  deep-linked evidence pack whose quotes cite the exact source passage, ready to drop into
+  an expert report or life care plan (e.g. *"Evidence for attendant-care needs after high
+  cervical spinal cord injury"*).
+- **Occupational, aviation, and toxicology medicine** — *"Return-to-work outcomes after
+  rotator-cuff repair"*, *"Neurocognitive effects of chronic organic-solvent exposure"*,
+  *"Cardiovascular fitness standards for commercial pilots"*.
+- **Non-clinical scholarly topics** — any field with a literature: *"Effectiveness of
+  congestion pricing on urban traffic"*, *"Seismic design standards for base-isolated
+  buildings"*, *"Efficacy of active-learning methods in undergraduate STEM"*.
+- **Annotated bibliographies / literature reviews** where every quote must link to the
+  exact passage in its source — the deep-linked, highlighted output is built for exactly
+  this.
+
+Whatever the question, the deliverable is the same: one combined HTML report with an
+executive summary, a stance/source-type table, per-article cards with highlighted,
+deep-linked verbatim quotes, a navigable narrative synthesis, a Word-ready Academic
+Summary, and a Vancouver References list — saved into Bookends and to your iCloud
+`RESEARCH_DIR`.
+
 ## Configuration
 
 The only path setting is **`RESEARCH_DIR`**, defined once near the top of `SKILL.md`.
@@ -97,6 +164,25 @@ Bump the `kaplan-research-skills` plugin `version`, reinstall/refresh the plugin
 restart Claude Desktop. Because that bundle is provisioned to every session, Dispatch
 child agents can then load **Bookends Research Skill** without any per-session setup.
 
+## Notes / Known behavior
+
+**Opening the `bookends://` deep links.** Every highlighted quote links to the exact
+passage in the source PDF via a `bookends://` deep link. How you follow the link depends
+on where you read the report:
+
+- **In a web browser (Safari/Chrome):** click normally — the browser passes the
+  `bookends://` scheme to macOS Launch Services, which routes it back to Bookends and
+  opens the PDF at the highlighted passage. (The report is also saved to your iCloud
+  `RESEARCH_DIR`, so you always have a browser-openable copy.)
+- **Inside Bookends' built-in viewer:** a normal left-click looks dead. Bookends'
+  embedded WebKit viewer follows ordinary `http(s)` links itself but does not hand a
+  custom `bookends://` link to Launch Services on a left-click, so the deep links appear
+  not to work even though they are correct. Reach them by **right-clicking the link and
+  choosing Open** (per the Bookends User Guide).
+- **Ordinary web links** (PMC / open-access URLs) work on a normal click in both places.
+
+Each generated report includes a short version of this note near the top.
+
 ## Files
 
 ```
@@ -105,8 +191,10 @@ bookends-research-skill/
 ├── README.md                    # this file
 ├── .claude-plugin/
 │   └── plugin.json              # standalone plugin manifest
-└── references/
-    └── bookends.md              # Bookends calls, bookends:// scheme, Vancouver, bridge quirks
+├── references/
+│   └── bookends.md              # Bookends calls, bookends:// scheme, Vancouver, bridge quirks
+└── examples/
+    └── screenshots/             # example report screenshots (see "Example output")
 ```
 
 ## Credits

@@ -25,6 +25,50 @@ separate deliverables if the user explicitly asks for it.
 
 ---
 
+## What you can use this for
+
+The topic is the only variable, so this skill works for **any question that has a
+literature** — clinical or not. Invoke it as **`Run the Bookends Research Skill on
+<your question>`**. Ready examples:
+
+- **Clinical evidence syntheses / treatment-efficacy reviews** — *"Is surgery effective
+  for chronic low back pain?"*, *"Efficacy of epidural steroid injections for lumbar
+  radiculopathy"*, *"Does physical therapy prevent recurrent ankle sprains?"*
+- **Drug / therapy comparisons** — *"Suzetrigine vs opioids for acute pain"*, *"SGLT2
+  inhibitors vs GLP-1 receptor agonists for CKD outcomes"*, *"DOACs vs warfarin in
+  atrial fibrillation"*.
+- **Prognosis / natural-history / life-expectancy questions** — *"Life expectancy after
+  severe TBI with disorders of consciousness"*, *"Influence of level of nursing care on
+  life expectancy after stroke"*, *"Natural history of untreated lumbar disc
+  herniation"*.
+- **Diagnosis / work-up reviews** — *"Work-up of secondary hypertension"*, *"Diagnostic
+  accuracy of D-dimer for pulmonary embolism"*.
+- **Complication / adverse-event profiles** — *"Adverse-event profile of long-term PPI
+  use"*, *"Complication rates of lumbar fusion"*.
+- **Standard-of-care questions** — *"Standard of care for diabetic foot ulcer
+  management"*, *"Guideline-recommended management of sepsis"*.
+- **Medical-legal / life-care-planning evidence packs & expert-report support** — build a
+  deep-linked evidence pack whose quotes cite the exact source passage, ready to drop into
+  an expert report or life care plan (e.g. *"Evidence for attendant-care needs after high
+  cervical spinal cord injury"*).
+- **Occupational, aviation, and toxicology medicine** — *"Return-to-work outcomes after
+  rotator-cuff repair"*, *"Neurocognitive effects of chronic organic-solvent exposure"*,
+  *"Cardiovascular fitness standards for commercial pilots"*.
+- **Non-clinical scholarly topics** — any field with a literature: *"Effectiveness of
+  congestion pricing on urban traffic"*, *"Seismic design standards for base-isolated
+  buildings"*, *"Efficacy of active-learning methods in undergraduate STEM"*.
+- **Annotated bibliographies / literature reviews** where every quote must link to the
+  exact passage in its source — the deep-linked, highlighted output is built for exactly
+  this.
+
+Whatever the question, the deliverable is the same: one combined HTML report with an
+executive summary, a stance/source-type table, per-article cards with highlighted,
+deep-linked verbatim quotes, a navigable narrative synthesis, a Word-ready Academic
+Summary, and a Vancouver References list — saved into Bookends and to your iCloud
+`RESEARCH_DIR`.
+
+---
+
 ## Configuration
 
 `RESEARCH_DIR` — where the HTML report is written to disk (in addition to Bookends).
@@ -61,6 +105,29 @@ through its MCP (`mcp__bookends-mcp__*`) and the highlight/deep-link MCP
 (`github.com/richardkaplan/pdf-highlight-and-deep-link-mcp`), which does the
 quote-location, highlight-writing, and `bookends://` deep-link generation. Install
 and configure it first, alongside the **bookends-mcp**.
+
+---
+
+## Reading the deep links (known Bookends viewer behavior)
+
+Every highlighted quote is a `bookends://` link to the exact passage in the source PDF.
+**How you open one depends on where you're reading the report:**
+
+- **In a web browser (Safari/Chrome):** click the link normally. The browser hands the
+  `bookends://` scheme to macOS Launch Services, which routes it back to Bookends and
+  opens the PDF at the highlighted passage. The report is saved to the iCloud
+  `RESEARCH_DIR` (step 7) precisely so it can be opened in a browser.
+- **Inside Bookends' built-in HTML/PDF viewer:** a normal left-click looks dead. The
+  embedded WebKit view navigates ordinary `http(s)` links itself but does **not** hand a
+  custom `bookends://` app-scheme link to macOS Launch Services on a left-click — so the
+  deep links appear not to work even though they are correct. Reach them by
+  **right-clicking the link and choosing Open** from the contextual menu (per the
+  Bookends User Guide).
+- **Ordinary web links** (PMC / open-access URLs) work on a normal left-click in both
+  places.
+
+Because of this, **every generated report must carry a short version of this note near
+the top** — see the "How to open the deep links" line in step 6.
 
 ---
 
@@ -262,6 +329,15 @@ Executive Summary — up-front bottom-line (4–8 sentences): what the evidence 
                     Bookends highlights; in-report links are native bookends:// + bold;
                     closes with a Word-ready Academic Summary and a Vancouver References
                     list.
+"How to open      — a short callout near the TOP of every report (in/near the Executive
+ the deep links"    Summary or the "How to read" line). Reproduce this wording (resolve
+                    RESEARCH_DIR to the real folder in the rendered report): "Each
+                    highlighted quote links (bookends://) to the exact passage in the
+                    source PDF. To follow a link: open this report in a web browser (it's
+                    also saved to your iCloud RESEARCH_DIR for that), or, inside Bookends,
+                    right-click the link and choose Open — Bookends' built-in viewer
+                    doesn't follow custom bookends:// links on a normal click. Ordinary
+                    web links work in both places."
 PART I — Literature Package
   Introduction    — topic framing + the stance legend
   Summary / Source-type Table — Article (BOLD native bookends:// link) · one-sentence
@@ -313,6 +389,18 @@ citation is correct (per *Standing rules*).
 Give the user the report's name, its native `bookends://` link, the iCloud path, the
 stance tally, and the total number of quotes highlighted and deep-linked (per-article
 cards + narrative). Confirm the Bookends group + subtopic tree was created and verified.
+
+---
+
+## Example output
+
+See the **Example output** section of `README.md` and the images in
+`examples/screenshots/` for representative screenshots of a finished report: the
+executive summary with the "how to open the deep links" note
+(`01-executive-summary.png`), the stance/source-type table (`02-stance-table.png`), a
+per-article card with an inline highlighted, deep-linked quote (`03-article-card.png`),
+and the Vancouver References list (`04-references.png`). The example is a
+public-literature run ("Is Surgery Effective for Low Back Pain?") with no PHI.
 
 ---
 

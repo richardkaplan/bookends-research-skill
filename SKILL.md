@@ -25,6 +25,31 @@ separate deliverables if the user explicitly asks for it.
 
 ---
 
+## Configuration
+
+`RESEARCH_DIR` — where the HTML report is written to disk (in addition to Bookends).
+It is defined **once, here**, and is the only path setting in the skill. **Never
+hardcode a username or an absolute personal path anywhere** — resolve everything from
+`$HOME` so the skill works for any macOS user and is safe to share publicly.
+
+- **Default:**
+  `RESEARCH_DIR = "$HOME/Library/Mobile Documents/com~apple~CloudDocs/Research"`
+  — the iCloud Drive root resolved generically from the current user's home directory
+  (`$HOME/Library/Mobile Documents/com~apple~CloudDocs/`), then a `Research` subfolder.
+  When the current user runs the skill this resolves to their own iCloud automatically;
+  no personal path is baked in.
+- **Override:** any user may set `RESEARCH_DIR` to their own folder name/path (e.g. a
+  differently-named iCloud folder, or a non-iCloud location).
+- **Fallback:** if iCloud Drive is **not** present at
+  `$HOME/Library/Mobile Documents/com~apple~CloudDocs/`, do not assume any specific
+  account — either use a documented local default (`$HOME/Research`) or ask the user
+  where to save. Always report the path actually used.
+
+The finished report is written to
+`<RESEARCH_DIR>/<Topic> — Deep-Linked Report/<Topic> — Deep-Linked Report (AI) <date>.html`.
+
+---
+
 ## Home is Bookends (always)
 
 This skill is Bookends-native. The PDFs live as **attachments on Bookends
@@ -274,10 +299,14 @@ citation is correct (per *Standing rules*).
   content label (label 3)**. Never tag it; never trash the prior report (move nothing to
   trash — if regenerating, add the new one alongside). Name it with an ` (AI)` suffix,
   e.g. `<Topic> — Deep-Linked Report (AI)`.
-- **iCloud:** also save the SAME HTML to iCloud at
-  `Research/<Topic> — Deep-Linked Report/<Topic> — Deep-Linked Report (AI) <date>.html`
+- **iCloud (or configured `RESEARCH_DIR`):** also save the SAME HTML under the
+  configured `RESEARCH_DIR` (see *Configuration* — resolved from `$HOME`, never a
+  hardcoded username/path):
+  `<RESEARCH_DIR>/<Topic> — Deep-Linked Report/<Topic> — Deep-Linked Report (AI) <date>.html`
   (create the folder if needed; `<date>` = today's date). This satisfies the standing
-  rule that researched results are saved as a formatted HTML file in iCloud.
+  rule that researched results are saved as a formatted HTML file in iCloud. If iCloud
+  Drive is not found at the default location, fall back per *Configuration* and report
+  the path actually used.
 
 ### 8. Report back
 

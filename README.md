@@ -46,6 +46,20 @@ Say things like:
 
 The topic is the only variable — everything else is fixed by the skill.
 
+## Configuration
+
+The only path setting is **`RESEARCH_DIR`**, defined once near the top of `SKILL.md`.
+It controls where the HTML report is written to disk (the Bookends save is separate and
+unaffected). Nothing personal is hardcoded — the path is resolved from `$HOME`, so the
+skill is safe to share publicly.
+
+- **Default:** `$HOME/Library/Mobile Documents/com~apple~CloudDocs/Research` — the
+  iCloud Drive root resolved generically from the current user's home directory, then a
+  `Research` subfolder. When you run it, it saves to *your* iCloud automatically.
+- **Override:** set `RESEARCH_DIR` to your own folder name/path (iCloud or otherwise).
+- **Fallback:** if iCloud Drive isn't found, the skill uses a documented local default
+  (`$HOME/Research`) or asks where to save, and reports the path used.
+
 ## Dependencies
 
 - **bookends-mcp** — Bookends reference/group/attachment operations.

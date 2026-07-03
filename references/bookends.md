@@ -100,6 +100,10 @@ The report ends with a section titled **`References`** (NOT "Works Cited"), form
   **Never** add tags to the report; **never** trash anything. When regenerating, add the
   new report alongside the old one (do not move the old one to trash). Name it with an
   ` (AI)` suffix, e.g. `<Topic> — Deep-Linked Report (AI)`.
-- **iCloud:** save the SAME HTML to
-  `Research/<Topic> — Deep-Linked Report/<Topic> — Deep-Linked Report (AI) <date>.html`
-  (create the folder if needed).
+- **iCloud / `RESEARCH_DIR`:** save the SAME HTML under the configured `RESEARCH_DIR`
+  (defined in SKILL.md → *Configuration*; default
+  `$HOME/Library/Mobile Documents/com~apple~CloudDocs/Research`, resolved from `$HOME`
+  — never a hardcoded username or absolute personal path):
+  `<RESEARCH_DIR>/<Topic> — Deep-Linked Report/<Topic> — Deep-Linked Report (AI) <date>.html`
+  (create the folder if needed). If iCloud Drive is not present, fall back to a
+  documented default (`$HOME/Research`) or ask the user, and report the path used.

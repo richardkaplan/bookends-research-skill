@@ -19,8 +19,10 @@ Given a topic, the skill:
 3. Attaches full-text PDFs to Bookends references (`bookends_quick_add` by DOI/PMID,
    `bookends_add_pdf`); for sources without accessible full text, attaches a rendered
    **abstract PDF** and flags it abstract-only.
-4. Writes **one persistent highlight + page-accurate `bookends://` deep link** per
-   source.
+4. Writes **one persistent highlight + a resolvable `bookends://` deep link** per source
+   — a page-accurate `…/pdf/<Library>/<refID>/<attachmentID>/<page0>` link (or a
+   reference-level `bookends://sonnysoftware.com/<refID>` fallback); never the fabricated
+   `selection/…` form that makes Bookends throw "nil object."
 5. Sorts each reference into the correct subtopic folder.
 6. Builds **ONE combined styled HTML report**: executive summary; per-article cards
    with inline highlighted, deep-linked verbatim quotes; a stance/source-type table; an
@@ -28,7 +30,10 @@ Given a topic, the skill:
    **References** section in **Vancouver** format.
 7. Saves the report **into Bookends** (Reports subgroup, HTML attached, label = AI
    content) **and to iCloud** at
-   `Research/<Topic> — Deep-Linked Report/<Topic> — Deep-Linked Report (AI) <date>.html`.
+   `Research/<Topic> — Deep-Linked Report/<Topic> — Deep-Linked Report (AI) <date>.html`,
+   and **delivers the deep-link list into the Bookends record's Notes as styled, clickable
+   text** (plain Paste, not Paste and Match Style) so the links are followable inside
+   Bookends.
 
 Standing rules baked in: **create-new / never-trash / label AI**; repurpose a
 mis-resolved DOI record **in place**; and honor the Bookends AppleScript-bridge quirks
@@ -166,20 +171,33 @@ child agents can then load **Bookends Research Skill** without any per-session s
 
 ## Notes / Known behavior
 
-**Opening the `bookends://` deep links.** Every highlighted quote links to the exact
-passage in the source PDF via a `bookends://` deep link. **To follow one, open the report
-in a web browser** — either double-click the attached `.html` in Bookends (it opens in
-your default browser) or open the iCloud copy in Safari/Chrome:
+**The `bookends://` deep links are clickable INSIDE Bookends.** Earlier versions of this
+skill claimed Bookends' viewer "cannot follow `bookends://` links on any click." That was
+wrong. The `bookends://` scheme works fine inside Bookends — two things have to be right:
 
-- **In a web browser (Safari/Chrome):** click normally — the browser passes the
-  `bookends://` scheme to macOS, which routes it back to Bookends and opens the PDF at the
-  highlighted passage. (The report is also saved to your iCloud `RESEARCH_DIR`, so you
-  always have a browser-openable copy.)
-- **Bookends' built-in preview pane cannot follow `bookends://` links on any click** —
-  not on a left-click and not on a right-click. Its embedded WebKit viewer follows
-  ordinary `http(s)` links itself but never hands a custom `bookends://` link to macOS, so
-  the deep links there appear dead even though they are correct.
-- **Ordinary web links** (PMC / open-access URLs) work on a normal click everywhere.
+- **Use a link form Bookends can resolve.** A reference link
+  `bookends://sonnysoftware.com/<refID>` and a page-accurate PDF link
+  `bookends://sonnysoftware.com/pdf/<Library>/<refID>/<attachmentID>/<page0>` both resolve
+  (these are the strings Bookends itself emits via Copy Link / `link to displayed PDF`). The
+  old `…/selection/<Library>/<id>/0/0/0/0/0/0` form does **not**: its zero (nil)
+  attachment/annotation id makes Bookends throw **"An error has occurred: nil object"** when
+  the link is followed. The skill now emits only the supported forms.
+- **Put the link in as styled text.** A `bookends://` link is clickable only when it sits in
+  a Bookends field (Notes or User1–User4) as **styled text with the live hyperlink**. When
+  pasting a link into a Bookends field, use a normal styled **Paste (`⌘V`)** — **not "Paste
+  and Match Style,"** which strips the link to dead plain text. (If your `⌘V` is mapped to
+  match-style in Bookends → Settings, use Edit → Paste or `⇧⌥⌘V`.) Bookends developer
+  tutorial: https://www.youtube.com/watch?v=GCp8R_tUuD8 ; the Bookends User Guide says the
+  same under "Hypertext links in reference fields."
+
+Every run now **delivers the report's link list into the report's Bookends record (Notes) as
+styled, clickable text**, so you can follow the deep links right inside Bookends.
+
+**Browser path still works (additional option).** You can also follow any link from a web
+browser — double-click the attached `.html` in Bookends (it opens in your default browser)
+or open the iCloud copy in Safari/Chrome; the browser passes the `bookends://` scheme to
+macOS, which routes it to Bookends. Ordinary web links (PMC / open-access URLs) work
+everywhere.
 
 Each generated report includes a short version of this note near the top.
 
@@ -192,7 +210,9 @@ bookends-research-skill/
 ├── .claude-plugin/
 │   └── plugin.json              # standalone plugin manifest
 ├── references/
-│   └── bookends.md              # Bookends calls, bookends:// scheme, Vancouver, bridge quirks
+│   └── bookends.md              # Bookends calls, supported bookends:// link forms, styled-paste, Vancouver, bridge quirks
+├── scripts/
+│   └── styled_links_to_clipboard.sh   # load a styled bookends:// link list onto the clipboard for a plain Paste
 └── examples/
     └── screenshots/             # example report screenshots (see "Example output")
 ```

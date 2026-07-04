@@ -108,19 +108,40 @@ and configure it first, alongside the **bookends-mcp**.
 
 ---
 
-## Reading the deep links (known Bookends viewer behavior)
+## Reading the deep links (Bookends link scheme + how to follow them)
 
-Every highlighted quote is a `bookends://` link to the exact passage in the source PDF.
-**To follow a `bookends://` deep link, open the report in a web browser** — either
-double-click the attached `.html` in Bookends (it opens in your default browser) or open
-the iCloud copy in Safari/Chrome (the report is saved to `RESEARCH_DIR` in step 7 for
-exactly this). The browser hands the `bookends://` scheme to macOS, which routes it back
-to Bookends and jumps to the highlighted passage.
+Every highlighted quote is a `bookends://` link to its source PDF. **The `bookends://`
+URL scheme works perfectly INSIDE Bookends** — clicking such a link that sits in a
+Bookends field (Notes or User1–User4, which hold styled text) opens the PDF at the right
+place. Two requirements make this reliable:
 
-**Bookends' built-in preview pane cannot follow `bookends://` links on any click** — not
-on a left-click and not on a right-click. Its embedded WebKit viewer follows ordinary
-`http(s)` links itself but never hands a custom `bookends://` app-scheme link to macOS, so
-the deep links appear dead there even though they are correct. Ordinary web links (PMC /
+1. **Use Bookends' supported link forms (never a fabricated one).** Bookends resolves:
+   - a **reference link** `bookends://sonnysoftware.com/<refID>` (selects the reference), and
+   - a **page-accurate PDF link** `bookends://sonnysoftware.com/pdf/<Library>/<refID>/<attachmentID>/<page0>`
+     (opens the attached PDF at `page0`, a 0-based page index).
+
+   Both are exactly what Bookends itself emits (Edit → Copy Link for a reference; the PDF
+   viewer's Copy Link, or the AppleScript `link to displayed PDF` property). **Do NOT emit
+   the old `…/selection/<Library>/<id>/0/0/0/0/0/0` form.** That fabricated "selection" URL
+   carries a zero (nil) attachment/annotation id; Bookends tries to resolve object id `0`,
+   finds nothing, and throws **"An error has occurred: nil object."** The hand-off from the
+   browser succeeds — the error is Bookends failing to resolve the fabricated target. See
+   step 4 for how to build the correct link.
+
+2. **Insert the link as STYLED (rich) text with a live hyperlink.** A `bookends://` link is
+   clickable only if it lands in the field as styled text carrying the live URL. When
+   pasting a link into a Bookends field, use a **normal (styled) Paste — `⌘V`** — **NOT
+   "Paste and Match Style"** (which strips the hyperlink to dead plain text). If your `⌘V`
+   is remapped to Paste-and-Match-Style in Bookends → Settings, use **Edit → Paste** or
+   **⇧⌥⌘V** to do a plain styled paste. (Bookends developer tutorial:
+   https://www.youtube.com/watch?v=GCp8R_tUuD8 ; corroborated by the Bookends User Guide,
+   "Hypertext links in reference fields": *only Paste inserts a live hypertext link, not
+   Paste And Match Style*.) Step 7 delivers the report's links into Bookends this way.
+
+**Browser path (also works, keep it).** You can still follow any link by opening the HTML
+report in a web browser — double-click the attached `.html` in Bookends (it opens in your
+default browser) or open the iCloud copy in Safari/Chrome. The browser hands the
+`bookends://` scheme to macOS, which routes it to Bookends. Ordinary web links (PMC /
 open-access URLs) work everywhere.
 
 Because of this, **every generated report must carry a short version of this note near
@@ -193,9 +214,13 @@ The report MUST reproduce the Priapism report's structure and follow these five 
    detached block-quotes. This inline-weave rule applies to BOTH the Part I summary
    cards and the Part II narrative. Style the span as both a highlight (light
    background) and a bold link.
-2. **In-report source links are NATIVE `bookends://` links, never a web proxy.** Link
-   every source inside the report with a direct `bookends://…` link (the report opens
-   on the Mac, so native links resolve). Web-only sources → the article URL (e.g. PMC).
+2. **In-report source links are NATIVE `bookends://` links (Bookends' supported forms),
+   never a web proxy.** Link every source inside the report with a direct `bookends://…`
+   link — a page-accurate `…/pdf/<Library>/<refID>/<attachmentID>/<page0>` link or, as a
+   fallback, a reference link `bookends://sonnysoftware.com/<refID>` (see step 4). **Never
+   the fabricated `…/selection/…/0/…` form** — it makes Bookends throw "nil object." The
+   report opens on the Mac, so these native links resolve. Web-only sources → the article
+   URL (e.g. PMC).
 3. **Source links are typographically obvious.** Render every link-to-source
    (`bookends://`, PMC / open-access URL) **bold** and visibly link-styled (color +
    underline). Apply consistently to inline quote links, per-article citation links,
@@ -293,10 +318,41 @@ mcp__pdf-highlight-and-deep-link__pdf_link_for_quote
 ```
 
 It writes a persistent highlight into the attached PDF (keeping a one-time `.bak`) and
-returns a **page-accurate** `bookends://…/selection/<Library>/<id>/0/<page>/0/0/0/0`
-link. Bookends resolves this to the correct page of the correct attachment (it ignores
-fabricated sentence-level coordinates — that is expected). Use the returned
-`bookends://…` link verbatim as the `href` for that quote.
+returns, among its fields, the **page index** of the match, a **`referenceLink`**
+(`bookends://sonnysoftware.com/<refID>`), and a legacy `deepLink` in the
+`…/selection/<Library>/<id>/0/<page>/0/0/0/0` form. **Do NOT use that `selection` deepLink
+as the quote's `href`** — its zero (nil) attachment/annotation id makes Bookends throw
+**"nil object"** when the link is followed. Instead build one of Bookends' **supported**
+link forms:
+
+- **Preferred — page-accurate PDF link.** Get the reference's real attachment id from
+  Bookends and build
+  `bookends://sonnysoftware.com/pdf/<Library>/<refID>/<attachmentID>/<page0>`
+  (`<page0>` = the match's 0-based page index). The attachment id is the 4th path segment
+  of Bookends' own `link to displayed PDF` for that reference, obtained via
+  `bookends_applescript_run`:
+
+  ```
+  tell application "Bookends"
+    set selected publication items of front library window to ¬
+      (publication items of front library window whose id is <refID>)
+    delay 0.3
+    return link to displayed PDF of front library window
+    -- e.g. bookends://sonnysoftware.com/pdf/Library1/<refID>/<attachmentID>/0
+  end tell
+  ```
+
+  Take the `<attachmentID>` from that result and substitute your `<page0>` for the
+  trailing page segment. This opens the exact PDF at the right page (the persistent
+  highlight marks the passage on that page) and never errors.
+- **Fallback — reference link.** If the attachment id can't be obtained (e.g. an
+  abstract-only ref, or one whose PDF isn't displayable), use the `referenceLink`
+  `bookends://sonnysoftware.com/<refID>`. It opens cleanly and selects the reference; the
+  in-PDF highlight still marks the passage. This is the form the original "excellent"
+  Priapism report used.
+
+Whichever form you use, it must be one Bookends actually resolves — never the fabricated
+`selection/.../0/...` URL.
 
 Tips that save reruns: if a quote returns `found:false`, the PDF has irregular spacing
 — shorten to a cleaner, distinctive sub-fragment (or call `pdf_get_layout` to read the
@@ -327,16 +383,18 @@ Executive Summary — up-front bottom-line (4–8 sentences): what the evidence 
                     closes with a Word-ready Academic Summary and a Vancouver References
                     list.
 "How to open      — a short callout near the TOP of every report (in/near the Executive
- the deep links"    Summary or the "How to read" line). Reproduce this wording (resolve
-                    RESEARCH_DIR to the real folder in the rendered report): "Each
-                    highlighted quote links (bookends://) to the exact passage in the
-                    source PDF. To follow a bookends:// deep link, open this report in a
-                    web browser — either double-click the attached .html in Bookends (it
-                    opens in your default browser) or open the iCloud copy in
-                    Safari/Chrome. The browser hands the bookends:// scheme to macOS,
-                    which routes it back to Bookends and jumps to the highlighted
-                    passage. Bookends' built-in preview pane cannot follow bookends://
-                    links on any click; ordinary web links work everywhere."
+ the deep links"    Summary or the "How to read" line). Reproduce this wording: "Each
+                    highlighted quote is a native bookends:// link to the source PDF.
+                    Inside Bookends the links are clickable when they sit in a field as
+                    styled text — the styled link list is delivered to this report's
+                    Bookends record's Notes (see step 7), so click them there. You can
+                    also follow any link from a web browser: double-click the attached
+                    .html in Bookends (it opens in your default browser) or open the
+                    iCloud copy in Safari/Chrome; the browser hands the bookends:// scheme
+                    to macOS, which routes it back to Bookends. If you paste a link into a
+                    Bookends field yourself, use a normal styled Paste (Cmd-V), NOT Paste
+                    and Match Style, or the live hyperlink is stripped. Ordinary web links
+                    (PMC / open-access) work everywhere."
 PART I — Literature Package
   Introduction    — topic framing + the stance legend
   Summary / Source-type Table — Article (BOLD native bookends:// link) · one-sentence
@@ -382,12 +440,27 @@ citation is correct (per *Standing rules*).
   rule that researched results are saved as a formatted HTML file in iCloud. If iCloud
   Drive is not found at the default location, fall back per *Configuration* and report
   the path actually used.
+- **Styled clickable links into Bookends (do every run).** So the deep links are clickable
+  *inside* Bookends — not only from a browser — also deliver the report's link list into
+  the report record as **styled text with live `bookends://` hyperlinks**. Build an HTML
+  fragment listing each source as a styled `bookends://` link (the supported forms from
+  step 4), convert it to RTF, place it on the macOS clipboard as rich text, and paste it
+  into the report reference's **Notes** field (or a User1–User4 field) with a **normal
+  styled Paste (`⌘V`) — NOT Paste and Match Style** (which would strip the links). The
+  helper `scripts/styled_links_to_clipboard.sh` (see `references/bookends.md` §3a) takes
+  `label<TAB>bookends://…` lines and loads the styled list onto the clipboard; then click
+  into the Notes field and press `⌘V` (or Edit → Paste / `⇧⌥⌘V` if `⌘V` is mapped to
+  match-style). With the user's permission the paste keystroke can be automated via System
+  Events. This is **in addition to** the attached HTML and the iCloud copy, not a
+  replacement.
 
 ### 8. Report back
 
 Give the user the report's name, its native `bookends://` link, the iCloud path, the
 stance tally, and the total number of quotes highlighted and deep-linked (per-article
-cards + narrative). Confirm the Bookends group + subtopic tree was created and verified.
+cards + narrative). Confirm the Bookends group + subtopic tree was created and verified,
+and that the styled, clickable `bookends://` link list was delivered into the report's
+Bookends record (Notes) so the links are followable inside Bookends.
 
 ---
 
@@ -405,10 +478,13 @@ public-literature run ("Is Surgery Effective for Low Back Pain?") with no PHI.
 
 ## Reference file
 
-- `references/bookends.md` — exact Bookends import/attach/highlight/deep-link calls,
-  the `bookends://` selection-link scheme, Vancouver formatting via
-  `bookends_get_formatted_reference`, the AppleScript-bridge `volume`/parentheses
-  workaround, group global-unique-name handling, and the label-AI / never-trash rules.
+- `references/bookends.md` — exact Bookends import/attach/highlight/deep-link calls, the
+  **supported `bookends://` link forms** (reference link and page-accurate `pdf` link) and
+  why the old `selection/…/0/…` form throws "nil object", how to deliver the links into
+  Bookends as **styled clickable text** (plain Paste, not Paste and Match Style), Vancouver
+  formatting via `bookends_get_formatted_reference`, the AppleScript-bridge
+  `volume`/parentheses workaround, group global-unique-name handling, and the label-AI /
+  never-trash rules.
 
 ---
 

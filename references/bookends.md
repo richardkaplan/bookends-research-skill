@@ -146,6 +146,27 @@ field and send a plain-paste keystroke via System Events; otherwise leave the st
 the clipboard and tell the user to press ⌘V into the Notes field. Either way this is **in
 addition to** the attached HTML report and the iCloud copy — those stay unchanged.
 
+## 3b. Two links per reference — web citation link + Open-in-Bookends link
+
+Every reference in the report (per-article cards AND the Vancouver References list) carries
+**two distinct links**:
+
+- **Citation → the article on the web.** Hyperlink the citation text (and the shown title)
+  to the article online, built from the Bookends record in priority order:
+  1. **DOI** → `https://doi.org/<doi>`
+  2. else **PMID** → `https://pubmed.ncbi.nlm.nih.gov/<pmid>/`
+  3. else the reference's **stored URL / publisher link** (the `url` field).
+
+  Pull `doi`, `pmid`, and `url` from the record (e.g. `bookends_get_properties`). If none of
+  the three exist, leave the citation as **plain text** (no dead link) and say so.
+- **"· Open in Bookends" → the item in Bookends.** A separate affordance carrying the
+  corrected `bookends://` deep link (§3 — page-accurate `pdf/…` form or reference-level
+  fallback), delivered as styled clickable text (§3a).
+
+Render the two so they are visually distinct (rule 6): the citation opens the paper online;
+the "Open in Bookends" tag opens the app. This applies identically in Part I cards and the
+References list; the Academic Summary stays plain-text / Word-ready.
+
 ## 4. Vancouver References (the one format change)
 
 The report ends with a section titled **`References`** (NOT "Works Cited"), formatted in

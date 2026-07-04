@@ -199,9 +199,9 @@ Having parsed the TOPIC, execute the numbered **End-to-end workflow** below in o
 
 ---
 
-## The five format rules (canonical — reproduce exactly every run)
+## The six format rules (canonical — reproduce exactly every run)
 
-The report MUST reproduce the Priapism report's structure and follow these five rules.
+The report MUST reproduce the Priapism report's structure and follow these six rules.
 
 1. **Per-article summaries carry 1–3 highlighted, hyperlinked quotes woven INLINE.**
    Each article's summary card embeds 1–3 exact verbatim quotes from *that* article.
@@ -232,15 +232,39 @@ The report MUST reproduce the Priapism report's structure and follow these five 
    **plain text — NOT hyperlinks** (so nothing breaks when pasted into Microsoft Word).
    It must be clean Rich Text (normal paragraphs/headings, plain bold/italic).
    **Immediately after it, include a section titled `References` (NOT "Works Cited")
-   formatted in Vancouver style** — numbered, in citation order, plain text. *(This
+   formatted in Vancouver style** — numbered, in citation order. *(This
    References/Vancouver section is the ONE deliberate change from the original Priapism
-   template, which ended with a "Works Cited" list.)*
+   template, which ended with a "Works Cited" list.)* Per **rule 6**, each References entry
+   is **dual-linked**: the citation text hyperlinks to the article on the web (DOI → PMID →
+   stored URL) and a trailing **"· Open in Bookends"** `bookends://` link opens it in
+   Bookends. The **Academic Summary above stays plain text** (Word-ready); only the
+   References list is linked.
 5. **The narrative synthesis is internally navigable.** Open Part II with a short table
    of contents whose items are **internal in-document links** (`<a href="#sec-N">`) to
    numbered sections, each carrying a **stable anchor id** (`<h2 id="sec-N">N. …</h2>`).
    These `#sec-N` links live only in the narrative — distinct from the external quote
    deep links (rule 1) and the native source links (rule 2). Do **not** put internal
-   section links in the Academic Summary or References (they stay Word-ready plain text).
+   section links in the Academic Summary or References; the Academic Summary stays Word-ready plain text, while the References list carries only the rule-6 links (web citation + Open in Bookends), not `#sec-N` anchors.
+
+6. **Every reference carries TWO distinct links — a web citation link and an
+   Open-in-Bookends link.** In BOTH the Part I per-article cards and the References
+   (Vancouver) list, render each source with:
+   - **The citation text (and the article title where shown) hyperlinked to the article
+     on the WEB** — a click opens the paper online in the browser. Build the URL from the
+     Bookends record in priority order: **DOI → `https://doi.org/<doi>`**, else **PMID →
+     `https://pubmed.ncbi.nlm.nih.gov/<pmid>/`**, else the reference's **stored URL /
+     publisher link** (`url` field). Pull `doi` / `pmid` / `url` from the record
+     (`bookends_get_properties`).
+   - **A separate "· Open in Bookends" affordance** (the "Open in Bookends" / "BE" tag)
+     carrying the corrected `bookends://` deep link (rule 2 — page-accurate `pdf` form or
+     reference-level fallback; never the nil-object `selection/…/0/…` form), delivered as
+     styled clickable text (see "Reading the deep links").
+
+   So **clicking the citation → the article's web page; clicking "Open in Bookends" → the
+   Bookends app** at that reference/passage. **If a reference has NO DOI, PMID, or URL,**
+   leave the citation as **plain text (no dead link)**, keep only the Open-in-Bookends
+   link, and note the reference has no online source. Style both links per rule 3, and
+   keep them visually distinct (citation vs the "Open in Bookends" tag).
 
 ---
 
@@ -379,7 +403,7 @@ Executive Summary — up-front bottom-line (4–8 sentences): what the evidence 
                     stance tally, and the single most important caveat. A reader can
                     stop here and know the answer.
 "How to read"     — 2–4 sentences: three parts under one cover; quotes deep-link to
-                    Bookends highlights; in-report links are native bookends:// + bold;
+                    Bookends highlights; each reference is dual-linked (citation → article on the web; "Open in Bookends" → the item in Bookends);
                     closes with a Word-ready Academic Summary and a Vancouver References
                     list.
 "How to open      — a short callout near the TOP of every report (in/near the Executive
@@ -397,11 +421,11 @@ Executive Summary — up-front bottom-line (4–8 sentences): what the evidence 
                     (PMC / open-access) work everywhere."
 PART I — Literature Package
   Introduction    — topic framing + the stance legend
-  Summary / Source-type Table — Article (BOLD native bookends:// link) · one-sentence
+  Summary / Source-type Table — Article (title = BOLD web link → DOI/PMID/URL, plus a "· Open in Bookends" bookends:// link) · one-sentence
                     summary · Journal · Year · Source type (guideline / systematic
                     review / RCT / etc.) · Stance pill + a tally line
   Article-by-Article Summaries — one card per paper: title + stance pill, full citation
-                    (open-access link + BOLD native bookends:// copy link), a 3–5
+                    (citation & title = BOLD web link → DOI/PMID/URL, PLUS a "· Open in Bookends" bookends:// link), a 3–5
                     sentence factual summary with 1–3 HIGHLIGHTED, deep-linked verbatim
                     quotes WOVEN INLINE (never stacked). Abstract-only sources flagged.
 PART II — Scholarly Synthesis (Deep-Linked)
@@ -413,7 +437,7 @@ Academic Summary  — flowing narrative synthesizing ALL positions with in-text
                     (Author, Year) citations as PLAIN TEXT (no hyperlinks); Word-ready
                     Rich Text.
 References         — titled "References" (NOT "Works Cited"), formatted in VANCOUVER
-                    style: numbered, citation order, plain text, no hyperlinks.
+                    style: numbered, citation order; each entry dual-linked — citation text → article web page (DOI → PMID → stored URL), plus a "· Open in Bookends" bookends:// link; plain-text citation only if no DOI/PMID/URL. (Academic Summary above stays plain-text / Word-ready.)
 Footer            — provenance, non-PHI note, "verify against primary sources", not
                     medical/legal advice.
 ```

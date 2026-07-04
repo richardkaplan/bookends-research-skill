@@ -27,7 +27,11 @@ Given a topic, the skill:
 6. Builds **ONE combined styled HTML report**: executive summary; per-article cards
    with inline highlighted, deep-linked verbatim quotes; a stance/source-type table; an
    internally navigable narrative synthesis; a Word-ready **Academic Summary**; and a
-   **References** section in **Vancouver** format.
+   **References** section in **Vancouver** format. **Every reference carries two links** —
+   the citation text opens the article on the **web** (DOI → PMID → stored URL) and a
+   separate **"· Open in Bookends"** `bookends://` link opens the item in Bookends (in both
+   the per-article cards and the References list; a source with no DOI/PMID/URL keeps a
+   plain-text citation + only the Bookends link).
 7. Saves the report **into Bookends** (Reports subgroup, HTML attached, label = AI
    content) **and to iCloud** at
    `Research/<Topic> — Deep-Linked Report/<Topic> — Deep-Linked Report (AI) <date>.html`,

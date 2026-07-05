@@ -1,6 +1,6 @@
 ---
 name: bookends-research-skill
-description: "Produce a Bookends-native, deep-linked, highlighted research report on ANY topic — the exact pipeline behind the 'excellent' Priapism deep-linked report, parameterized so only the RESEARCH TOPIC changes each run. Creates a new Bookends group named for the topic with topic-appropriate subtopic child groups (always including a Reports folder), finds authoritative sources (guidelines, systematic reviews, key primary studies) via Firecrawl Research / PubMed, attaches full-text PDFs (or flagged abstract-only PDFs) to Bookends references, writes one persistent highlight + page-accurate bookends:// deep link per source, sorts each reference into its subtopic, and assembles ONE combined styled HTML report (executive summary; per-article cards with inline highlighted deep-linked verbatim quotes; stance/source-type table; internally navigable narrative synthesis; Word-ready Academic Summary; and a References section in VANCOUVER format). Saves the report into Bookends (Reports subgroup, HTML attached, label = AI content) AND to iCloud. Use this skill whenever the user asks for a Bookends research report, a deep-linked / highlighted literature review, an evidence synthesis or annotated bibliography built in Bookends, or says things like 'run the Bookends research skill on <topic>', 'deep-link report in Bookends', 'bookends:// deep-linked quotes', or 'do a <topic> report like the priapism one'. Depends on the bookends-mcp and the pdf-highlight-and-deep-link MCP."
+description: "Produce a Bookends-native, deep-linked, highlighted research report on ANY topic — the exact pipeline behind the 'excellent' Priapism deep-linked report, parameterized so only the RESEARCH TOPIC changes each run. Creates a new Bookends group named for the topic with topic-appropriate subtopic child groups (always including a Reports folder), finds authoritative sources (guidelines, systematic reviews, key primary studies) via Firecrawl Research / PubMed, attaches full-text PDFs (or flagged abstract-only PDFs) to Bookends references, writes one persistent highlight + page-accurate bookends:// deep link per source, sorts each reference into its subtopic, and assembles ONE combined styled HTML report (executive summary; per-article cards with inline highlighted deep-linked verbatim quotes; stance/source-type table; internally navigable narrative synthesis; Word-ready Academic Summary; and a References section in VANCOUVER format). Saves the report into Bookends (Reports subgroup — the finished HTML is converted headlessly to a hyperlink-preserving PDF and that PDF is attached, label = AI content) AND to iCloud as HTML. Use this skill whenever the user asks for a Bookends research report, a deep-linked / highlighted literature review, an evidence synthesis or annotated bibliography built in Bookends, or says things like 'run the Bookends research skill on <topic>', 'deep-link report in Bookends', 'bookends:// deep-linked quotes', or 'do a <topic> report like the priapism one'. Depends on the bookends-mcp and the pdf-highlight-and-deep-link MCP."
 ---
 
 # Bookends Research Skill
@@ -139,8 +139,8 @@ place. Two requirements make this reliable:
    Paste And Match Style*.) Step 7 delivers the report's links into Bookends this way.
 
 **Browser path (also works, keep it).** You can still follow any link by opening the HTML
-report in a web browser — double-click the attached `.html` in Bookends (it opens in your
-default browser) or open the iCloud copy in Safari/Chrome. The browser hands the
+report in a web browser — the Bookends attachment is now a hyperlink-preserving PDF, so
+open the iCloud HTML copy in Safari/Chrome. The browser hands the
 `bookends://` scheme to macOS, which routes it to Bookends. Ordinary web links (PMC /
 open-access URLs) work everywhere.
 
@@ -412,9 +412,8 @@ Executive Summary — up-front bottom-line (4–8 sentences): what the evidence 
                     Inside Bookends the links are clickable when they sit in a field as
                     styled text — the styled link list is delivered to this report's
                     Bookends record's Notes (see step 7), so click them there. You can
-                    also follow any link from a web browser: double-click the attached
-                    .html in Bookends (it opens in your default browser) or open the
-                    iCloud copy in Safari/Chrome; the browser hands the bookends:// scheme
+                    also follow any link from a web browser: the Bookends attachment is a
+                    hyperlink-preserving PDF, so open the iCloud HTML copy in Safari/Chrome; the browser hands the bookends:// scheme
                     to macOS, which routes it back to Bookends. If you paste a link into a
                     Bookends field yourself, use a normal styled Paste (Cmd-V), NOT Paste
                     and Match Style, or the live hyperlink is stripped. Ordinary web links
@@ -451,11 +450,31 @@ citation is correct (per *Standing rules*).
 
 ### 7. Save the report — Bookends AND iCloud
 
-- **Bookends:** file the finished HTML into the **`<Topic> — Reports` subgroup** with
-  the report's PDF/HTML **attached to a report reference**, and set the record's **AI-
-  content label (label 3)**. Never tag it; never trash the prior report (move nothing to
-  trash — if regenerating, add the new one alongside). Name it with an ` (AI)` suffix,
-  e.g. `<Topic> — Deep-Linked Report (AI)`.
+- **Bookends (attach a PDF, not the HTML):** the report is **authored as HTML**, but the
+  copy stored **in Bookends must be a PDF** (the iCloud copy stays HTML — see next bullet).
+  After the HTML is finalized, convert it to PDF **headlessly, preserving every hyperlink as
+  a clickable link annotation** — both the web citation links (`https://doi.org/…`,
+  PubMed / PMC) **AND** the custom-scheme `bookends://…` "Open in Bookends" deep links.
+  **No computer-use** (no mouse, keyboard, or screenshots) — this runs as a background /
+  headless conversion only. File the resulting **PDF** into the **`<Topic> — Reports`
+  subgroup**, attached to a report reference, and set the record's **AI-content label
+  (label 3)**. Never tag it; never trash the prior report (move nothing to trash — if
+  regenerating, add the new one alongside; **supersede** an older Bookends copy by
+  renaming/keeping it, e.g. a ` … SUPERSEDED HTML.html` suffix, never deleting). Name it
+  with an ` (AI)` suffix, e.g. `<Topic> — Deep-Linked Report (AI)`.
+  - **Headless HTML→PDF conversion that preserves link annotations (incl. custom schemes).**
+    Use a converter that keeps clickable link annotations for BOTH web and `bookends://`
+    links, in this preferred order:
+    1. **WeasyPrint** — best at custom-scheme link annotations:
+       `weasyprint "<report>.html" "<report>.pdf"`
+    2. **Headless Chrome/Chromium** — verified (2026-07-04) to preserve `bookends://` annotations:
+       `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu --no-pdf-header-footer --print-to-pdf="<report>.pdf" "file://<ABSOLUTE-PATH>/<report>.html"`
+    3. **wkhtmltopdf** — last resort: `wkhtmltopdf "<report>.html" "<report>.pdf"`
+    **Verify before attaching** (background/headless, **NO computer-use**): dump the PDF's link
+    annotations (e.g. with `pypdf`) and confirm BOTH a `doi.org`/PubMed link AND a `bookends://`
+    link are present; if a converter drops the custom-scheme links, switch to one that keeps them.
+    Attach the verified PDF with `bookends_add_pdf` (bookends-mcp) or
+    `mcp__pdf-highlight-and-deep-link__bookends_attach_pdf`.
 - **iCloud (or configured `RESEARCH_DIR`):** also save the SAME HTML under the
   configured `RESEARCH_DIR` (see *Configuration* — resolved from `$HOME`, never a
   hardcoded username/path):
@@ -475,7 +494,7 @@ citation is correct (per *Standing rules*).
   `label<TAB>bookends://…` lines and loads the styled list onto the clipboard; then click
   into the Notes field and press `⌘V` (or Edit → Paste / `⇧⌥⌘V` if `⌘V` is mapped to
   match-style). With the user's permission the paste keystroke can be automated via System
-  Events. This is **in addition to** the attached HTML and the iCloud copy, not a
+  Events. This is **in addition to** the attached PDF and the iCloud HTML copy, not a
   replacement.
 
 ### 8. Report back

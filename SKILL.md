@@ -462,17 +462,27 @@ citation is correct (per *Standing rules*).
   regenerating, add the new one alongside; **supersede** an older Bookends copy by
   renaming/keeping it, e.g. a ` … SUPERSEDED HTML.html` suffix, never deleting). Name it
   with an ` (AI)` suffix, e.g. `<Topic> — Deep-Linked Report (AI)`.
-  - **Headless HTML→PDF conversion that preserves link annotations (incl. custom schemes).**
-    Use a converter that keeps clickable link annotations for BOTH web and `bookends://`
-    links, in this preferred order:
-    1. **WeasyPrint** — best at custom-scheme link annotations:
-       `weasyprint "<report>.html" "<report>.pdf"`
-    2. **Headless Chrome/Chromium** — verified (2026-07-04) to preserve `bookends://` annotations:
-       `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu --no-pdf-header-footer --print-to-pdf="<report>.pdf" "file://<ABSOLUTE-PATH>/<report>.html"`
-    3. **wkhtmltopdf** — last resort: `wkhtmltopdf "<report>.html" "<report>.pdf"`
-    **Verify before attaching** (background/headless, **NO computer-use**): dump the PDF's link
-    annotations (e.g. with `pypdf`) and confirm BOTH a `doi.org`/PubMed link AND a `bookends://`
-    link are present; if a converter drops the custom-scheme links, switch to one that keeps them.
+  - **Headless HTML→PDF conversion — APPROVED / PRIMARY converter: headless Chrome print-to-pdf.**
+    Convert the finalized HTML to PDF with **headless Google Chrome / Chromium** — the
+    approved, confirmed converter (verified 2026-07-04 to preserve clickable link
+    annotations for BOTH the web citation links AND the custom-scheme `bookends://` deep
+    links). Run it in the background / headless — **NO computer-use** (no mouse, keyboard,
+    or screenshots) — using exactly this command:
+    `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu --no-pdf-header-footer --print-to-pdf="<report>.pdf" "file://<ABSOLUTE-PATH>/<report>.html"`
+    (Any Chromium build with `--headless=new --print-to-pdf` is equivalent. Do NOT use a
+    browser "Print…" dialog or any GUI/computer-use path — background/headless only.
+    WeasyPrint / wkhtmltopdf are NOT the documented method and should not be used for this
+    report PDF.)
+    **MANDATORY link-annotation verification — this check is REQUIRED and the run FAILS if
+    it does not pass.** Before attaching, dump the generated PDF's link annotations
+    (background/headless, **NO computer-use** — e.g. with `pypdf`: iterate every page's
+    `/Annots` and collect each annotation's `/A/URI`) and confirm the PDF contains BOTH
+    (a) at least one web link (`https://doi.org/…`, PubMed / PMC) **AND** (b) at least one
+    `bookends://…` link. If either class of link is missing or has been flattened, **STOP:
+    do NOT attach the PDF and do NOT ship a link-less report** — treat the run as FAILED,
+    report which links were lost, and re-render (re-run headless Chrome / regenerate the
+    HTML) until the check passes. Only a PDF that passes this verification may be filed
+    into Bookends.
     Attach the verified PDF with `bookends_add_pdf` (bookends-mcp) or
     `mcp__pdf-highlight-and-deep-link__bookends_attach_pdf`.
 - **iCloud (or configured `RESEARCH_DIR`):** also save the SAME HTML under the

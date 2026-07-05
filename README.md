@@ -33,7 +33,9 @@ Given a topic, the skill:
    the per-article cards and the References list; a source with no DOI/PMID/URL keeps a
    plain-text citation + only the Bookends link).
 7. Saves the report **into Bookends** (Reports subgroup — the finished HTML is converted
-   headlessly to a hyperlink-preserving **PDF**, which is the attached Bookends copy;
+   headlessly to a hyperlink-preserving **PDF** via **headless Chrome print-to-pdf** (the
+   approved converter; a mandatory `pypdf` check confirms both the web and `bookends://` link
+   annotations survived, or the run fails), which is the attached Bookends copy;
    label = AI content) **and to iCloud** as HTML at
    `Research/<Topic> — Deep-Linked Report/<Topic> — Deep-Linked Report (AI) <date>.html`,
    and **delivers the deep-link list into the Bookends record's Notes as styled, clickable

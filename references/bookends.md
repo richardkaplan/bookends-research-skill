@@ -20,21 +20,71 @@ its MCP (`mcp__bookends-mcp__*`) and the pdf-highlight MCP
 - File references later with
   `{ action: "add_references", name: "<Topic> — <Subtopic>", reference_ids: [ ... ] }`.
 
-## 1. Get references and attach PDFs
+## 1. Retrieve references + PDFs — Bookends-first, Firecrawl only as fallback
 
-- De-duplicate first: `mcp__bookends-mcp__bookends_search` by DOI/PMID/title
-  (`sqlWhere` accepts bare `doi` / `pmid` aliases).
-- Add by identifier: `mcp__bookends-mcp__bookends_quick_add` (DOI/PMID/arXiv) — pulls
+**Try Bookends for each article first; fall back to Firecrawl only when Bookends cannot
+retrieve it, then import the result back into Bookends.** Log each article's path
+(Bookends vs Firecrawl-fallback) so the run is auditable.
+
+### 1a. PRIMARY — Bookends' own retrieval (verified features)
+
+Confirmed against the Bookends User Guide and the AppleScript dictionary — do not assume
+features beyond these:
+
+- **Online Search / Bookends Browser.** Bookends searches literature databases directly:
+  built-in **PubMed, Google Scholar, Semantic Scholar, Google Books, Library of Congress,
+  JSTOR, arXiv**, plus Z39.50/SRU catalogs. Its **"Attempt PDF download"** option (same as
+  *Refs → Get PDF → From Internet (If Available)*) auto-downloads and attaches the PDF on
+  import when the article is open-access or the IP has access.
+- **Identifier add:** `mcp__bookends-mcp__bookends_quick_add` (DOI/PMID/arXiv) — pulls
   metadata and, where available, full text.
-- Attach a downloaded full-text PDF:
-  `mcp__pdf-highlight-and-deep-link__bookends_attach_pdf { id, pdfPath }`
-  (or `mcp__bookends-mcp__bookends_add_pdf` for local files / direct PDF URLs /
-  identifier retrieval).
-- Attach an abstract-only PDF when no full text exists:
+- **Automatic PDF download for existing references:** Bookends' native **`download pdfs`**
+  command fetches and attaches the full-text PDF using a reference's stored **PMID, DOI,
+  or arXiv id** (it also tries to resolve a DOI first when only some ids are present). It
+  is the scriptable form of *Get PDF → From Internet (If Available)*. Drive it via
+  `mcp__bookends-mcp__bookends_add_pdf` (identifier retrieval / direct PDF URL / local
+  file); when only AppleScript fits, run it with
+  `mcp__bookends-mcp__bookends_applescript_run`:
+
+  ```
+  tell application "Bookends"
+    tell front library window
+      set r to download pdfs {publication item id "<refID>"}
+    end tell
+  end tell
+  -- returns JSON, one result per publication item
+  ```
+
+  Then confirm the attachment with `mcp__bookends-mcp__bookends_get_attachment_paths`.
+- **Local PDF / folder:** attach an on-disk PDF with
+  `mcp__pdf-highlight-and-deep-link__bookends_attach_pdf { id, pdfPath }`, or bulk-import a
+  folder with `mcp__bookends-mcp__bookends_import_pdf_folder` (resolve `metadata_required`
+  items by DOI/PMID/ISBN/arXiv through `bookends_quick_add`).
+- De-duplicate first: `mcp__bookends-mcp__bookends_search` by DOI/PMID/title
+  (`sqlWhere` accepts bare `doi` / `pmid` aliases) so a re-run never duplicates a ref.
+
+An article counts as **Bookends-retrieved** when Bookends located the reference AND
+attached a usable PDF (or a deliberately-flagged abstract-only PDF) via the above.
+
+### 1b. FALLBACK — Firecrawl (only when Bookends can't)
+
+Only when the Bookends path fails for a given article — no match, unresolvable DOI/PMID,
+or no retrievable PDF — fall back to the **`firecrawl-research-index`** skill /
+`mcp__mcp-server-firecrawl__firecrawl_research_*` (and/or PubMed) to find and fetch it,
+then **import the result back into Bookends**: create/locate the reference
+(`bookends_quick_add`) and attach the fetched PDF (`bookends_attach_pdf` /
+`bookends_add_pdf`). Mark the article **Firecrawl-fallback**. Firecrawl costs money and is
+less private than the native Bookends path — reserve it for this fallback and for
+genuinely external-website research.
+
+### 1c. Abstract-only + id/provenance bookkeeping
+
+- Attach an abstract-only PDF when no full text exists (either path):
   `mcp__pdf-highlight-and-deep-link__bookends_attach_abstract_pdf` — and flag the
   article abstract-only in the report (its quote is not a full-text deep link).
-- Record each reference's Bookends **id** — the locator for highlighting, linking, and
-  filing into a subtopic.
+- Record each reference's Bookends **id** and its **retrieval provenance** (Bookends vs
+  Firecrawl-fallback) — the id is the locator for highlighting, linking, and filing into
+  a subtopic; the provenance feeds the run's audit tally.
 
 ## 2. The AppleScript-bridge quirks (bake in)
 

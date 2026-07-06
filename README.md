@@ -14,8 +14,10 @@ Given a topic, the skill:
    subtopic child groups** (derived from the topic's own structure; always including a
    **Reports** folder). Group names are project-qualified to avoid Bookends'
    global-unique-name error, and real nesting is verified.
-2. Finds authoritative sources (clinical guidelines, systematic reviews/meta-analyses,
-   key primary studies) via **Firecrawl Research / PubMed**.
+2. Retrieves authoritative sources (clinical guidelines, systematic reviews/meta-analyses,
+   key primary studies) **Bookends-first** — via Bookends' own online search / identifier
+   retrieval / automatic PDF download — falling back to **Firecrawl Research / PubMed**
+   only for articles Bookends cannot retrieve (logged per article for auditability).
 3. Attaches full-text PDFs to Bookends references (`bookends_quick_add` by DOI/PMID,
    `bookends_add_pdf`); for sources without accessible full text, attaches a rendered
    **abstract PDF** and flags it abstract-only.
@@ -145,7 +147,8 @@ skill is safe to share publicly.
 - **pdf-highlight-and-deep-link MCP**
   (`github.com/richardkaplan/pdf-highlight-and-deep-link-mcp`) — quote location,
   persistent highlight writing, and `bookends://` deep-link generation.
-- **Firecrawl Research** (or PubMed) for source discovery.
+- **Firecrawl Research** (or PubMed) — fallback source discovery only, for articles
+  Bookends cannot retrieve itself.
 
 ## Install
 

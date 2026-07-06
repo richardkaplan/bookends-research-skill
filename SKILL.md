@@ -1,6 +1,6 @@
 ---
 name: bookends-research-skill
-description: "Produce a Bookends-native, deep-linked, highlighted research report on ANY topic — the exact pipeline behind the 'excellent' Priapism deep-linked report, parameterized so only the RESEARCH TOPIC changes each run. Creates a new Bookends group named for the topic with topic-appropriate subtopic child groups (always including a Reports folder), finds authoritative sources (guidelines, systematic reviews, key primary studies) via Firecrawl Research / PubMed, attaches full-text PDFs (or flagged abstract-only PDFs) to Bookends references, writes one persistent highlight + page-accurate bookends:// deep link per source, sorts each reference into its subtopic, and assembles ONE combined styled HTML report (executive summary; per-article cards with inline highlighted deep-linked verbatim quotes; stance/source-type table; internally navigable narrative synthesis; Word-ready Academic Summary; and a References section in VANCOUVER format). Saves the report into Bookends (Reports subgroup — the finished HTML is converted headlessly to a hyperlink-preserving PDF and that PDF is attached, label = AI content) AND to iCloud as HTML. Use this skill whenever the user asks for a Bookends research report, a deep-linked / highlighted literature review, an evidence synthesis or annotated bibliography built in Bookends, or says things like 'run the Bookends research skill on <topic>', 'deep-link report in Bookends', 'bookends:// deep-linked quotes', or 'do a <topic> report like the priapism one'. Depends on the bookends-mcp and the pdf-highlight-and-deep-link MCP."
+description: "Produce a Bookends-native, deep-linked, highlighted research report on ANY topic — the exact pipeline behind the 'excellent' Priapism deep-linked report, parameterized so only the RESEARCH TOPIC changes each run. Creates a new Bookends group named for the topic with topic-appropriate subtopic child groups (always including a Reports folder), retrieves authoritative sources (guidelines, systematic reviews, key primary studies) Bookends-first — using Bookends' own online search / identifier retrieval / automatic PDF download — and falls back to Firecrawl Research / PubMed only for articles Bookends cannot retrieve, then attaches full-text PDFs (or flagged abstract-only PDFs) to Bookends references, writes one persistent highlight + page-accurate bookends:// deep link per source, sorts each reference into its subtopic, and assembles ONE combined styled HTML report (executive summary; per-article cards with inline highlighted deep-linked verbatim quotes; stance/source-type table; internally navigable narrative synthesis; Word-ready Academic Summary; and a References section in VANCOUVER format). Saves the report into Bookends (Reports subgroup — the finished HTML is converted headlessly to a hyperlink-preserving PDF and that PDF is attached, label = AI content) AND to iCloud as HTML. Use this skill whenever the user asks for a Bookends research report, a deep-linked / highlighted literature review, an evidence synthesis or annotated bibliography built in Bookends, or says things like 'run the Bookends research skill on <topic>', 'deep-link report in Bookends', 'bookends:// deep-linked quotes', or 'do a <topic> report like the priapism one'. Depends on the bookends-mcp and the pdf-highlight-and-deep-link MCP."
 ---
 
 # Bookends Research Skill
@@ -160,8 +160,13 @@ or `Bookends deep-link report on Efficacy of Epidural Steroid Injections`.
 - **TOPIC / question** — the subject of the report. This is the only variable. If no
   topic is given, that is the single field you cannot guess — ask for it. Otherwise
   **do not ask permission to proceed**; run the whole pipeline end-to-end.
-- **SEARCH SOURCE** defaults to **Firecrawl Research / PubMed** (open-access
-  full-text). Honor an explicitly named alternative if the user gives one.
+- **SEARCH SOURCE is Bookends-first.** For every article, retrieve through **Bookends
+  itself** — its built-in online search (PubMed / Google Scholar / Semantic Scholar /
+  arXiv / etc.), identifier-based add, and automatic PDF download — and fall back to
+  **Firecrawl Research / PubMed** **only** for articles Bookends cannot retrieve (see
+  step 2). This honors the standing preference to prefer local/native tools over
+  Firecrawl (Firecrawl costs money and is less private — reserve it for genuinely
+  external web research). Honor an explicitly named alternative if the user gives one.
 - **STORAGE** is always **Bookends** (plus the iCloud copy in step 7). Non-negotiable
   for this skill.
 - If the user names a specific reference count, honor it; otherwise target **≥25**
@@ -302,34 +307,90 @@ plus **Reports**). Aim for ~4–8 subtopics.
   on).
 - Record each group's id.
 
-### 2. Find authoritative sources
+### 2. Retrieve authoritative sources — Bookends-first, Firecrawl only as fallback
 
-Gather a stance-balanced set of authoritative sources on the topic — **clinical
+Assemble a stance-balanced set of authoritative sources on the topic — **clinical
 practice guidelines, systematic reviews / meta-analyses, and key primary studies** —
-via **Firecrawl Research** (`firecrawl-research-index` skill /
-`mcp__mcp-server-firecrawl__firecrawl_research_*`) and/or **PubMed**. Prefer
-**open-access full-text PDFs** spanning supportive, equivocal, and critical findings.
-**Target ≥25 references** when that many quality sources exist; favor reviews,
-meta-analyses, and guidelines first. Gather fewer only when the literature genuinely
-does not support 25 — and say so explicitly. Honor an explicit user count if given.
+spanning supportive, equivocal, and critical findings. **Target ≥25 references** when
+that many quality sources exist; favor reviews, meta-analyses, and guidelines first.
+Gather fewer only when the literature genuinely does not support 25 — and say so
+explicitly. Honor an explicit user count if given.
 
-### 3. Attach PDFs to Bookends references
+**Retrieval order is Bookends-first, per article.** Bookends can itself search the
+literature databases and download full-text PDFs, so use it as the PRIMARY retrieval
+engine and reach for Firecrawl only when Bookends comes up empty. For EACH candidate
+article, try the Bookends path first; only if it fails do you fall back to Firecrawl.
+**Log which path each article came through** (Bookends vs Firecrawl-fallback) and carry
+that provenance through the run so a completed run is auditable (surface the tally in
+the step-8 report-back).
 
-For each source, create/locate the reference and attach its PDF:
-- **De-duplicate first:** `mcp__bookends-mcp__bookends_search` by DOI/PMID/title.
-- **Add by identifier:** `mcp__bookends-mcp__bookends_quick_add` (by **DOI/PMID/arXiv**)
-  pulls metadata (and full text where Bookends can retrieve it).
-- **Attach a downloaded full-text PDF:**
+**A. PRIMARY — retrieve via Bookends itself.** Use Bookends' own, verified retrieval
+features (confirmed against the Bookends User Guide + AppleScript dictionary; see
+`references/bookends.md` §1):
+
+1. **Identifier-based add + metadata.** When you have (or can find) a DOI / PMID / arXiv
+   id, add the reference with `mcp__bookends-mcp__bookends_quick_add` — it pulls the
+   metadata (and full text where Bookends can retrieve it).
+2. **Bookends online search.** Bookends searches literature databases directly — built-in
+   **PubMed, Google Scholar, Semantic Scholar, Google Books, the Library of Congress,
+   JSTOR, arXiv**, plus Z39.50/SRU catalogs — via its Online Search / Bookends Browser.
+   Use it to locate an article and import its reference. Bookends' **"Attempt PDF
+   download"** option (equivalent to *Refs → Get PDF → From Internet (If Available)*)
+   auto-downloads and attaches the PDF on import when the article is open-access or your
+   IP has access.
+3. **Automatic PDF download for a reference.** Once a reference carries a PMID / DOI /
+   arXiv id (or a JSTOR URL), have Bookends fetch and attach the full-text PDF with its
+   native **`download pdfs`** command — the scriptable form of *Get PDF → From Internet
+   (If Available)*. Prefer `mcp__bookends-mcp__bookends_add_pdf` with the reference's
+   identifier / a direct PDF URL; when only the AppleScript command fits, run
+   `download pdfs {publication item id "<id>"}` via
+   `mcp__bookends-mcp__bookends_applescript_run` (see `references/bookends.md` §1).
+   Confirm the attachment landed with `mcp__bookends-mcp__bookends_get_attachment_paths`.
+4. **Find & attach a local PDF / folder.** If the PDF is already on disk, attach it with
+   `mcp__pdf-highlight-and-deep-link__bookends_attach_pdf { id, pdfPath }`, or bulk-import
+   a folder with `mcp__bookends-mcp__bookends_import_pdf_folder` (resolve any
+   `metadata_required` items by DOI/PMID/ISBN/arXiv through `bookends_quick_add`, per the
+   bookends-mcp guidance).
+
+An article counts as **Bookends-retrieved** when Bookends located the reference **and**
+attached a usable PDF (or a deliberately-flagged abstract-only PDF) through the features
+above.
+
+**B. FALLBACK — Firecrawl, only when Bookends cannot retrieve the article.** Fall back
+**per article**, only when the Bookends path above fails for that article — i.e. Bookends
+returns no match, cannot resolve the DOI/PMID, or cannot retrieve a usable PDF. Then use
+the **`firecrawl-research-index`** skill / `mcp__mcp-server-firecrawl__firecrawl_research_*`
+(and/or PubMed) to find and fetch the article, and import the result **back into
+Bookends** — create/locate the reference and attach the fetched PDF exactly as in step 3.
+Mark the article's provenance **Firecrawl-fallback**. Reserve Firecrawl for this fallback
+role and for genuinely external-website research (it costs money and is less private than
+the native Bookends path).
+
+Whichever path an article comes through, its PDF ends up **attached to a Bookends
+reference** — that is the invariant the rest of the pipeline depends on.
+
+### 3. Finalize each reference + PDF in Bookends (de-dup, attach, log provenance)
+
+Every source from step 2 — whether it came through the Bookends path or the
+Firecrawl-fallback — must end up as a **Bookends reference with its PDF attached**. For
+each source:
+- **De-duplicate first:** `mcp__bookends-mcp__bookends_search` by DOI/PMID/title, so a
+  re-run never creates a duplicate reference.
+- **Ensure the reference exists with metadata:** `mcp__bookends-mcp__bookends_quick_add`
+  (by **DOI/PMID/arXiv**) pulls metadata (and full text where Bookends can retrieve it).
+- **Ensure a PDF is attached:** a Bookends-path article already has its PDF (step 2A);
+  for a Firecrawl-fallback article, attach the fetched PDF with
   `mcp__pdf-highlight-and-deep-link__bookends_attach_pdf { id, pdfPath }`, or
   `mcp__bookends-mcp__bookends_add_pdf` for local files / direct PDF URLs / identifier-
-  based retrieval.
-- **No accessible full text?** Attach a rendered **abstract PDF** with
+  based retrieval. Verify with `mcp__bookends-mcp__bookends_get_attachment_paths`.
+- **No accessible full text (either path)?** Attach a rendered **abstract PDF** with
   `mcp__pdf-highlight-and-deep-link__bookends_attach_abstract_pdf` and **flag it
   abstract-only** in the report (its quote is an abstract key sentence, not a full-text
   deep link).
-- Record each reference's Bookends **id** — it is the locator for highlighting,
-  linking, and filing. Respect the AppleScript-bridge quirks in *Standing rules* when
-  writing any field (no `volume` write, no parentheses).
+- **Record each reference's Bookends `id` and its retrieval provenance** (Bookends vs
+  Firecrawl-fallback) — the id is the locator for highlighting, linking, and filing; the
+  provenance feeds the step-8 audit tally. Respect the AppleScript-bridge quirks in
+  *Standing rules* when writing any field (no `volume` write, no parentheses).
 
 ### 4. One persistent highlight + page-accurate deep link per source
 
@@ -510,7 +571,7 @@ citation is correct (per *Standing rules*).
 ### 8. Report back
 
 Give the user the report's name, its native `bookends://` link, the iCloud path, the
-stance tally, and the total number of quotes highlighted and deep-linked (per-article
+stance tally, the retrieval-source tally (Bookends vs Firecrawl-fallback per article), and the total number of quotes highlighted and deep-linked (per-article
 cards + narrative). Confirm the Bookends group + subtopic tree was created and verified,
 and that the styled, clickable `bookends://` link list was delivered into the report's
 Bookends record (Notes) so the links are followable inside Bookends.

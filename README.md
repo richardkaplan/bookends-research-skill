@@ -1,6 +1,6 @@
 # Bookends Research Skill
 
-This is a reusable Claude Cowork/Dispatch skill which researches a topic using the Bookends MCP, creates a new pertinent Group with Folders in Bookends, auto-highlights key sections of the sources, and creates an overall summary of the issues involved in the literature.   Optionally it can detect the relevant issues to search if you provide it with a Devonthink X-Item-Link and in that case it can post the final report both to Bookends and to Devonthink.  It can also post an HTML version of the report to your iCloud.
+This is a reusable Claude Cowork/Dispatch skill which researches a topic using the Bookends MCP, creates a new pertinent Group with Folders in Bookends, auto-highlights key sections of the sources, and creates an overall summary of the issues involved in the literature.   Optionally it can detect the relevant issues to search if you provide it with a Devonthink X-Item-Link and in that case it can post the final report both to Bookends and to Devonthink.  It can also post an HTML version of the report to your iCloud.  It can also search PubMed or other sourcese via Firecrawl as an alternative to Bookends Search if you have set up a Firecrawl connector.
 
 I use this in researching multiple sides of academic medical issues; it is equally useful in other disciplines as well.
 
@@ -8,10 +8,9 @@ To install just give Claude the URL for the repository and ask it to install the
 
 Feel free to contact me if you have any questions/suggestions.
 
-Richard S. Kaplan, M.D.
-Kaplan Life Care Planning
-www.kaplanlifecareplan.com
-rkaplan@kaplanlifecareplan.com
+**Richard S. Kaplan, MD** — Kaplan Life Care Planning
+- Email: rkaplan@kaplanlifecareplan.com
+- Website: https://kaplanlifecareplan.com/
 
 
 

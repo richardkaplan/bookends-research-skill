@@ -8,8 +8,6 @@ To install just give Claude the URL for the repository and ask it to install the
 
 Feel free to contact me if you have any questions/suggestions.
 
----
-
 Richard S. Kalplan, M.D.
 Kaplan Life Care PLanning
 www.kaplanlifecareplan.com

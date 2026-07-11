@@ -95,6 +95,26 @@ deep link ("Open in Bookends") to the exact passage in the source PDF.*
 *The closing References list, numbered in citation order and formatted in Vancouver
 style.*
 
+![The highlighted passage in the source PDF, opened in Bookends via the deep link](examples/screenshots/05-pdf-highlight-deeplink.png)
+*Where a deep link actually lands: the source article itself — Andersson et al., "Open
+versus arthroscopic repair of the triangular fibrocartilage complex: a systematic
+review," J Exp Orthop 2018;5:6 — opened in Bookends at the exact page, with the skill's
+persistent yellow highlight sitting on the quoted conclusion: "There is insufficient
+evidence to recommend one technique over the other in clinical practice."*
+
+This is the part that makes the reports worth reading: the skill doesn't just cite its
+sources. For each source it writes a **persistent highlight over the key passage directly
+into the source PDF stored in Bookends**, and generates a **page-accurate `bookends://`
+deep link** to that exact passage. So clicking a quote — or a **Bookends Citation** link —
+in the report opens the real article PDF in Bookends, scrolled to the highlighted
+sentence. You land on the evidence itself, not on a bibliography entry. The highlight is
+written into the PDF and persists in the library, so it is still there the next time you
+open that article, report or no report.
+
+Each citation accordingly carries two Bookends links: a **Bookends Group** link, which
+opens the subtopic group the source was filed into, and a **Bookends Citation** link,
+which opens that specific reference and its highlighted PDF.
+
 ## What you can use this for
 
 The topic is the only variable, so this skill works for **any question that has a

@@ -8,10 +8,12 @@ To install just give Claude the URL for the repository and ask it to install the
 
 Feel free to contact me if you have any questions/suggestions.
 
+
+## Contact Info
+
 **Richard S. Kaplan, MD** — Kaplan Life Care Planning
 - Email: rkaplan@kaplanlifecareplan.com
 - Website: https://kaplanlifecareplan.com/
-
 
 
 ## What it does

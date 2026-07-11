@@ -1,10 +1,21 @@
 # Bookends Research Skill
 
-A reusable Cowork/Dispatch skill that reproduces **exactly** the workflow and report
-format of the "excellent" Priapism deep-linked Bookends project — **parameterized so
-that only the research TOPIC changes each run.** One deliberate change from the
-original: the closing citation list is titled **References** and formatted in
-**Vancouver** style (the original ended with a "Works Cited" list).
+This is a reusable Claude Cowork/Dispatch skill which researches a topic using the Bookends MCP, creates a new pertinent Group with Folders in Bookends, auto-highlights key sections of the sources, and creates an overall summary of the issues involved in the literature.   Optionally it can detect the relevant issues to search if you provide it with a Devonthink X-Item-Link and in that case it can post the final report both to Bookends and to Devonthink.  It can also post an HTML version of the report to your iCloud.
+
+I use this in researching multiple sides of academic medical issues; it is equally useful in other disciplines as well.
+
+To install just give Claude the URL for the repository and ask it to install the skill.  Then ask "Do a Bookends Search on ..."
+
+Feel free to contact me if you have any questions/suggestions.
+
+---
+
+Richard S. Kalplan, M.D.
+Kaplan Life Care PLanning
+www.kaplanlifecareplan.com
+rkaplan@kaplanlifecareplan.com
+
+
 
 ## What it does
 

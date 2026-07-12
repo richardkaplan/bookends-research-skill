@@ -5,7 +5,7 @@ WHAT IT REFUSES TO DO
 ---------------------
 It does not pass a link because the URL *looks* right, and it does not pass a
 link because `open` returned 0. `open` returns 0 even when Bookends then throws
-"An error has occurred: nil object" — that false signal is exactly what let two
+"An error has occurred: nil object" — that false signal is exactly what lets a
 earlier "the links are fixed" reports ship broken.
 
 PAGE CONVENTION — PROVEN, DO NOT RE-LITIGATE
@@ -35,7 +35,7 @@ NAVIGATION:
   1. Banned forms are fatal.
        bookends://sonnysoftware.com/selection/<Lib>/<ref>/0/0/0/0/0/0
        bookends://sonnysoftware.com/<ref>                      (bare id)
-     Bookends has no /selection/ route. The pdf-highlight-and-deep-link MCP
+     Bookends has no /selection/ route. Any tool that
      SYNTHESISES that URL whenever Bookends' own link call fails, so its
      `deepLink` field can never be trusted.
 

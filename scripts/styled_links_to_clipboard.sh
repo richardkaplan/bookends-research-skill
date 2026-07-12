@@ -10,7 +10,7 @@
 #        A line with only a URL (no tab) uses the URL as its own label.
 #
 # EXAMPLE:
-#   printf 'Kim 2016 — High-flow priapism\tbookends://sonnysoftware.com/pdf/Library1/101722/1783086068/0\n' \
+#   printf 'Qaseem 2017 — ACP guideline\tbookends://sonnysoftware.com/pdf/Library1/101722/1783086068/0\n' \
 #     | ./styled_links_to_clipboard.sh
 #
 # THEN in Bookends: click the reference's Notes field and press Cmd-V

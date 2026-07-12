@@ -1,22 +1,15 @@
 #!/usr/bin/env python3
 """Highlight a quote in a Bookends-attached PDF and return its citation URL.
 
-This REPLACES the pdf-highlight-and-deep-link MCP's link generation.
-
 Why
 ---
-The MCP's `pdf_link_for_quote` / `bookends_get_selection_link` return a
-`deepLink` of the form
+A citation URL of the form
 
     bookends://sonnysoftware.com/selection/<Lib>/<refID>/0/0/0/0/0/0
 
-Bookends has NO /selection/ route. The MCP SYNTHESISES that URL whenever its
-call into Bookends fails, and it does so silently — so a report can be built,
-validated by eye, shipped, and every single citation link in it throws
-"An error has occurred: nil object" when the reader clicks. That happened
-across ten reports and three storage surfaces before anyone clicked one.
-
-So the link is no longer taken from the MCP at all:
+does NOT work: Bookends has no /selection/ route, and opening such a URL makes
+Bookends raise the modal "An error has occurred: nil object". A citation URL
+must therefore never be string-templated. Instead:
 
   * the HIGHLIGHT and the PAGE INDEX are produced here, with PyMuPDF, against
     the actual PDF file;

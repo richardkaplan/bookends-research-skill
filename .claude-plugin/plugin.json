@@ -1,8 +1,20 @@
 {
   "name": "bookends-research-skill",
-  "version": "0.1.4",
-  "description": "Bookends Research Skill — reproduces the Priapism deep-linked Bookends report pipeline for ANY topic (topic is the only variable): a new Bookends group with topic-appropriate subtopic child groups, authoritative sources via Firecrawl/PubMed, full-text (or flagged abstract-only) PDFs attached to references, one persistent highlight + page-accurate bookends:// deep link per source, and ONE combined styled HTML report (executive summary; per-article cards with inline highlighted deep-linked quotes; stance/source-type table; navigable narrative synthesis; Word-ready Academic Summary; References in Vancouver style). Saved into Bookends (Reports subgroup, label = AI content) and to iCloud.",
-  "author": { "name": "Richard S. Kaplan, MD", "email": "rkaplan@kaplanlifecareplan.com" },
+  "version": "0.2.0",
+  "description": "Bookends Research Skill \u2014 a deep-linked, highlighted research report on any topic. Creates a Bookends group with topic-appropriate subtopic child groups, finds authoritative sources (guidelines, systematic reviews, key studies), attaches full-text PDFs to Bookends references, writes one persistent highlight and a page-accurate bookends:// deep link per source, and assembles ONE combined styled HTML report (executive summary; per-article cards with inline highlighted, deep-linked quotes; stance/source-type table; navigable narrative synthesis; Word-ready Academic Summary; References in Vancouver style). Saved into Bookends (Reports subgroup) and to disk.",
+  "author": {
+    "name": "Richard S. Kaplan, MD",
+    "email": "rkaplan@kaplanlifecareplan.com"
+  },
   "homepage": "https://github.com/richardkaplan/bookends-research-skill",
-  "keywords": ["bookends", "research", "deep-link", "highlight", "vancouver", "literature-review", "evidence-synthesis", "medical-legal"]
+  "keywords": [
+    "bookends",
+    "research",
+    "deep-link",
+    "highlight",
+    "vancouver",
+    "literature-review",
+    "evidence-synthesis",
+    "medical-legal"
+  ]
 }

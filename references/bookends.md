@@ -1,8 +1,8 @@
 # Bookends home — groups, import, attach, deep-link, Vancouver, and the bridge quirks
 
 Source-specific detail for running the Bookends Research Skill. Drive Bookends through
-its MCP (`mcp__bookends-mcp__*`) and the pdf-highlight MCP
-(`mcp__pdf-highlight-and-deep-link__*`) — never through screen automation.
+its MCP (`mcp__bookends-mcp__*`) — the MCP server bundled inside Bookends.app — never
+through screen automation.
 
 ## 0. Create the topic group + subtopic child groups
 
@@ -57,7 +57,7 @@ features beyond these:
 
   Then confirm the attachment with `mcp__bookends-mcp__bookends_get_attachment_paths`.
 - **Local PDF / folder:** attach an on-disk PDF with
-  `mcp__pdf-highlight-and-deep-link__bookends_attach_pdf { id, pdfPath }`, or bulk-import a
+  `mcp__bookends-mcp__bookends_add_pdf { items:[{ id, path }] }`, or bulk-import a
   folder with `mcp__bookends-mcp__bookends_import_pdf_folder` (resolve `metadata_required`
   items by DOI/PMID/ISBN/arXiv through `bookends_quick_add`).
 - De-duplicate first: `mcp__bookends-mcp__bookends_search` by DOI/PMID/title
@@ -72,16 +72,17 @@ Only when the Bookends path fails for a given article — no match, unresolvable
 or no retrievable PDF — fall back to the **`firecrawl-research-index`** skill /
 `mcp__mcp-server-firecrawl__firecrawl_research_*` (and/or PubMed) to find and fetch it,
 then **import the result back into Bookends**: create/locate the reference
-(`bookends_quick_add`) and attach the fetched PDF (`bookends_attach_pdf` /
-`bookends_add_pdf`). Mark the article **Firecrawl-fallback**. Firecrawl costs money and is
+(`bookends_quick_add`) and attach the fetched PDF (`bookends_add_pdf`). Mark the article
+**Firecrawl-fallback**. Firecrawl costs money and is
 less private than the native Bookends path — reserve it for this fallback and for
 genuinely external-website research.
 
 ### 1c. Abstract-only + id/provenance bookkeeping
 
-- Attach an abstract-only PDF when no full text exists (either path):
-  `mcp__pdf-highlight-and-deep-link__bookends_attach_abstract_pdf` — and flag the
-  article abstract-only in the report (its quote is not a full-text deep link).
+- Attach an abstract-only PDF when no full text exists (either path): render the citation +
+  abstract as HTML, print it to PDF with headless Chrome, attach with
+  `mcp__bookends-mcp__bookends_add_pdf` — and flag the article abstract-only in the report
+  (its quote is not a full-text deep link).
 - Record each reference's Bookends **id** and its **retrieval provenance** (Bookends vs
   Firecrawl-fallback) — the id is the locator for highlighting, linking, and filing into
   a subtopic; the provenance feeds the run's audit tally.
@@ -121,24 +122,13 @@ python3 scripts/highlight_and_link.py --ref <id> --quote "<verbatim fragment>"
 PyMuPDF writes the persistent highlight and resolves the page; the URL is **read back out
 of Bookends** (`link to displayed PDF`) with only the page substituted.
 
-The **pdf-highlight-and-deep-link MCP** is no longer used for the link. For reference, its
-`pdf_link_for_quote` returns a `referenceLink` (`bookends://sonnysoftware.com/<refID>`)
-and a `deepLink` of the form:
-
-```
-bookends://sonnysoftware.com/selection/<Library>/<id>/0/<page>/0/0/0/0
-```
-
-**⛔ R-BOOKENDS-PDF-DEEPLINK-02 (2026-07-11): NEVER use that `deepLink`.** Bookends implements
+**⛔ R-BOOKENDS-PDF-DEEPLINK-02: never emit a `…/selection/…` link.** Bookends implements
 no `selection` route; it dereferences a nil object and raises the modal **"An error has
-occurred: nil object."** This was reproduced empirically on 2026-07-11 (Skala Pediatric-LLD
-report: all 131 citation links used this form and every one of them errored). Take from the
-MCP only the **persistent highlight** and the **page index**; discard `deepLink` and
-`referenceLink`.
+occurred: nil object."** Never string-template a citation URL — read it back from Bookends.
 
-**The `referenceLink` — the bare `bookends://sonnysoftware.com/<refID>` form — is BANNED.**
-It selects the reference inside the FULL marked library, dropping the reader into unrelated
-citations ("soup"). Never emit it for anything.
+**The bare `bookends://sonnysoftware.com/<refID>` form is BANNED.** It selects the
+reference inside the FULL marked library, dropping the reader into unrelated citations
+("soup"). Never emit it for anything.
 
 Supported forms, and what each is for:
 
@@ -169,9 +159,8 @@ Supported forms, and what each is for:
 
 Note on passage-level links: Bookends can produce a true selection link via the
 `link to selected text of displayed PDF` property, but only for an ACTIVE manual text
-selection in the viewer — it cannot be fabricated from coordinates
-(`mcp__pdf-highlight-and-deep-link__bookends_get_selection_link` reads that property when a
-selection exists). So for automated reports, page-accurate (`pdf/…`) is the tightest
+selection in the viewer — it cannot be fabricated from coordinates. So for automated
+reports, page-accurate (`pdf/…`) is the tightest
 reliably-resolvable target; the persistent highlight supplies passage-level precision on
 that page.
 
@@ -207,7 +196,7 @@ the clipboard and tell the user to press ⌘V into the Notes field. Either way t
 addition to** the attached HTML report and the iCloud copy — those stay unchanged.
 
 ## 3b. Three links per reference — web citation + Bookends Group + Bookends Citation
-## (R-BOOKENDS-DUAL-LINK-01, 2026-07-11)
+## (R-BOOKENDS-DUAL-LINK-01)
 
 Every reference in the report (Summary/Source-type table, per-article cards, AND the
 Vancouver References list — **anywhere a per-source link is emitted**) carries **three

@@ -1,15 +1,14 @@
 ---
 name: bookends-research-skill
-description: "Produce a Bookends-native, deep-linked, highlighted research report on any topic — the pipeline behind the Priapism report, parameterized so only the topic changes each run. Creates a Bookends group with subtopic child groups plus a Reports folder, retrieves sources (guidelines, systematic reviews, key studies) Bookends-first — via Bookends' search, identifier retrieval and PDF download, with candidate papers first enumerated by a ROUTINE Firecrawl Research / PubMed search per subtopic (verified PMIDs/DOIs), falling back to a Firecrawl fetch only when Bookends cannot attach — attaches full-text PDFs, writes one persistent highlight and page-accurate bookends:// deep link per source, and assembles ONE combined HTML report (highlighted deep-linked quotes, stance table, narrative synthesis, Vancouver references). Use whenever the user asks for a Bookends research report, deep-linked or highlighted literature review, evidence synthesis or annotated bibliography in Bookends, or says 'run the Bookends research skill' or 'bookends:// deep-linked quotes'. Depends on the bookends-mcp and pdf-highlight-and-deep-link MCP."
+description: "Produce a Bookends-native, deep-linked, highlighted research report on any topic, parameterized so only the topic changes each run. Creates a Bookends group with subtopic child groups plus a Reports folder, retrieves sources (guidelines, systematic reviews, key studies) Bookends-first — via Bookends' search, identifier retrieval and PDF download, with candidate papers first enumerated by a ROUTINE Firecrawl Research / PubMed search per subtopic (verified PMIDs/DOIs), falling back to a Firecrawl fetch only when Bookends cannot attach — attaches full-text PDFs, writes one persistent highlight and page-accurate bookends:// deep link per source, and assembles ONE combined HTML report (highlighted deep-linked quotes, stance table, narrative synthesis, Vancouver references). Use whenever the user asks for a Bookends research report, deep-linked or highlighted literature review, evidence synthesis or annotated bibliography in Bookends, or says 'run the Bookends research skill' or 'bookends:// deep-linked quotes'. Depends on the Bookends MCP server that ships inside Bookends.app."
 ---
 
 # Bookends Research Skill
 
-This skill reproduces **exactly** the workflow and report format of the Priapism
-deep-linked Bookends project — the report the user called "excellent" — **parameterized
-so that only the RESEARCH TOPIC changes from run to run.** Everything else stays
-identical, with **one deliberate format change**: the citation list at the end is
-titled **"References"** (not "Works Cited") and is formatted in **Vancouver** style.
+This skill produces a deep-linked, highlighted Bookends research report, **parameterized
+so that only the RESEARCH TOPIC changes from run to run.** Everything else — the pipeline,
+the report structure, the link forms — is fixed. The citation list at the end is titled
+**"References"** and is formatted in **Vancouver** style.
 
 Every claim in the finished report is traceable: each verbatim quotation is a
 hyperlink that opens the source PDF **in Bookends at the exact highlighted passage**
@@ -98,24 +97,24 @@ subfolder** of `RESEARCH_DIR` (created if missing):
 ## Home is Bookends (always)
 
 This skill is Bookends-native. The PDFs live as **attachments on Bookends
-references**; deep links are **`bookends://…` page/selection links**. Drive Bookends
-through its MCP (`mcp__bookends-mcp__*`) and the highlight/deep-link MCP
-(`mcp__pdf-highlight-and-deep-link__*`) — **never** through screen automation.
+references**; deep links are **`bookends://…` page links**. Drive Bookends through its
+MCP (`mcp__bookends-mcp__*`) — the MCP server bundled inside Bookends.app — **never**
+through screen automation.
 
-**Dependency — PyMuPDF, not the MCP's link generator.**
+**Dependencies.**
 
 ```
 pip install pymupdf                    # `import fitz` — quote location, highlight, page index
 pip install pyobjc-framework-Quartz    # so the validator can SEE a Bookends modal alert
+pip install pypdf                      # link-annotation audit of the rendered report PDF
 ```
 
-Quote location, the persistent highlight, and the page index come from **PyMuPDF**
-(`scripts/highlight_and_link.py`), run against the real PDF. The **citation URL is
-read back from Bookends itself** (AppleScript `link to displayed PDF`) — never from
-an MCP. The **pdf-highlight-and-deep-link MCP** is optional and **its `deepLink` is
-never used**: it fabricates the non-existent `…/selection/…` route whenever its call
-into Bookends fails, silently, which is how ten reports shipped with every citation
-link throwing "nil object". Install **bookends-mcp** alongside.
+Plus **Google Chrome** (headless), used to render the finished HTML report to a
+link-preserving PDF.
+
+Quote location, the persistent highlight, and the page index all come from **PyMuPDF**
+(`scripts/highlight_and_link.py`), run against the real PDF. The **citation URL is read
+back from Bookends itself** (AppleScript `link to displayed PDF`) — never string-templated.
 
 ---
 
@@ -130,7 +129,7 @@ place. Two requirements make this reliable:
    - a **GROUP link** → `bookends://sonnysoftware.com/group/<LibraryName>/<URL-encoded group name>`,
      pointing at the group that holds that source. **NEVER the bare
      `bookends://sonnysoftware.com/<refID>` form** — it drops the reader into the full
-     marked-library list (user-confirmed defect, Skala report 2026-07-10);
+     marked-library list;
    - a **page-accurate PDF deep link** →
      `bookends://sonnysoftware.com/pdf/<Library>/<refID>/<attachmentID>/<page0>` — the ONLY
      supported form for a citation/quote link. It opens **that specific reference and its
@@ -144,12 +143,9 @@ place. Two requirements make this reliable:
    ### R-BOOKENDS-PDF-DEEPLINK-02 (hard rule — supersedes the old selection form)
 
    **The `…/selection/<Library>/<refID>/…` form is BANNED. Never emit it, under any
-   circumstance, from any source — including the `deepLink` field returned by the
-   pdf-highlight-and-deep-link MCP, which fabricates that shape.** Bookends does not
+   circumstance.** Bookends does not
    implement a `selection` route with a nil (`0`) attachment/annotation id: it dereferences
    a nil object and throws the modal **"An error has occurred: nil object."** dialog.
-   (Empirically reproduced and fixed 2026-07-11, Skala Pediatric-LLD report: all 131
-   citation links in that report used the selection form and every one of them errored.)
 
    **Citation links must be GENERATED BY BOOKENDS, never string-templated.** Obtain each
    one from Bookends' own AppleScript property, which returns the authoritative URL:
@@ -196,7 +192,7 @@ the top** — see the "How to open the deep links" line in step 6.
 ## Interpreting the invocation — parse, then expand
 
 Treat the user request as a terse one-liner to parse and auto-expand. The user
-normally types ONE line, e.g. `Run the Bookends Research Skill on Ischemic Priapism`
+normally types ONE line, e.g. `Run the Bookends Research Skill on Adhesive Capsulitis`
 or `Bookends deep-link report on Efficacy of Epidural Steroid Injections`.
 
 **Parse ONE thing: the TOPIC.** Everything else is fixed by this skill.
@@ -255,15 +251,15 @@ Having parsed the TOPIC, execute the numbered **End-to-end workflow** below in o
 
 ## The six format rules (canonical — reproduce exactly every run)
 
-The report MUST reproduce the Priapism report's structure and follow these six rules.
+The report MUST follow these six rules exactly.
 
 1. **Per-article summaries carry 1–3 highlighted, hyperlinked quotes woven INLINE.**
    Each article's summary card embeds 1–3 exact verbatim quotes from *that* article.
-   Each quote is (a) highlighted in the attached PDF via the pdf-highlight MCP (the
-   call is idempotent — an identical highlight is reused) and (b) rendered as an active
+   Each quote is (a) highlighted in the attached PDF by `scripts/highlight_and_link.py`
+   (PyMuPDF; the call is idempotent — an identical highlight is reused) and (b) rendered as an active
    hyperlink to its exact-passage `bookends://` deep link. **Weave each quoted phrase
    directly into the running sentence** so reading the paragraph carries you through
-   the quote (e.g. *…the panel concluded ischemic priapism is "a compartment syndrome"
+   the quote (e.g. *…the panel concluded the condition is "a compartment syndrome"
    requiring emergent decompression [link], which is why…*). **Never** stack quotes as
    detached block-quotes. This inline-weave rule applies to BOTH the Part I summary
    cards and the Part II narrative. Style the span as both a highlight (light
@@ -287,9 +283,7 @@ The report MUST reproduce the Priapism report's structure and follow these six r
    **plain text — NOT hyperlinks** (so nothing breaks when pasted into Microsoft Word).
    It must be clean Rich Text (normal paragraphs/headings, plain bold/italic).
    **Immediately after it, include a section titled `References` (NOT "Works Cited")
-   formatted in Vancouver style** — numbered, in citation order. *(This
-   References/Vancouver section is the ONE deliberate change from the original Priapism
-   template, which ended with a "Works Cited" list.)* Per **rule 6**, each References entry
+   formatted in Vancouver style** — numbered, in citation order. Per **rule 6**, each References entry
    carries the web citation link (DOI → PMID → stored URL) **plus BOTH Bookends links —
    "· Bookends Group · Bookends Citation"** (R-BOOKENDS-DUAL-LINK-01). The **Academic Summary
    above stays plain text** (Word-ready); only the References list is linked.
@@ -324,8 +318,7 @@ The report MUST reproduce the Priapism report's structure and follow these six r
      deep link `bookends://sonnysoftware.com/pdf/<Library>/<refID>/<attachmentID>/<page0>`,
      read back from Bookends via the AppleScript `link to displayed PDF` property
      (R-BOOKENDS-PDF-DEEPLINK-02). **Never string-template a citation URL, and never emit the
-     `…/selection/…` form** — including the `deepLink` field returned by
-     `pdf_link_for_quote`, which fabricates that shape and makes Bookends throw
+     `…/selection/…` form** — Bookends has no such route and throws
      "An error has occurred: nil object." The same Bookends-generated `/pdf/` URL is used for
      the quote links inside the card.
 
@@ -354,15 +347,12 @@ Do these in order. Idempotent and resumable throughout.
 
 Create a **NEW Bookends group named for the topic**, e.g. `<Topic> — Deep-Linked
 Report`. Inside it, create **subtopic child groups that are natural for THIS topic** —
-derive them from the topic's own structure, do not copy the priapism labels verbatim.
+derive them from the topic's own structure.
 **Always include a `Reports` child group** (the finished report is filed there).
 
 **Derive the subtopics from the topic.** Look at how the literature on the topic is
-actually organized and mirror it. For reference, the priapism run used:
-`Causes & Etiology` · `Diagnosis` · `Treatment (Ischemic)` ·
-`Treatment (Non-ischemic / High-flow)` · `Stuttering / Recurrent` ·
-`Prognosis & Outcomes` · `Reports`. For a **different** topic, produce the analogous
-natural breakdown (typically some mix of *Etiology/Pathophysiology*,
+actually organized and mirror it. Produce the natural breakdown for the topic at hand
+(typically some mix of *Etiology/Pathophysiology*,
 *Diagnosis/Assessment*, one or more *Treatment/Management* buckets split by the axis
 that matters for that topic, *Special populations / subtypes*, *Prognosis / Outcomes*,
 plus **Reports**). Aim for ~4–8 subtopics.
@@ -431,7 +421,7 @@ features (confirmed against the Bookends User Guide + AppleScript dictionary; se
    `mcp__bookends-mcp__bookends_applescript_run` (see `references/bookends.md` §1).
    Confirm the attachment landed with `mcp__bookends-mcp__bookends_get_attachment_paths`.
 4. **Find & attach a local PDF / folder.** If the PDF is already on disk, attach it with
-   `mcp__pdf-highlight-and-deep-link__bookends_attach_pdf { id, pdfPath }`, or bulk-import
+   `mcp__bookends-mcp__bookends_add_pdf { items:[{ id, path }] }`, or bulk-import
    a folder with `mcp__bookends-mcp__bookends_import_pdf_folder` (resolve any
    `metadata_required` items by DOI/PMID/ISBN/arXiv through `bookends_quick_add`, per the
    bookends-mcp guidance).
@@ -464,13 +454,14 @@ each source:
   (by **DOI/PMID/arXiv**) pulls metadata (and full text where Bookends can retrieve it).
 - **Ensure a PDF is attached:** a Bookends-path article already has its PDF (step 2A);
   for a Firecrawl-fallback article, attach the fetched PDF with
-  `mcp__pdf-highlight-and-deep-link__bookends_attach_pdf { id, pdfPath }`, or
-  `mcp__bookends-mcp__bookends_add_pdf` for local files / direct PDF URLs / identifier-
-  based retrieval. Verify with `mcp__bookends-mcp__bookends_get_attachment_paths`.
-- **No accessible full text (either path)?** Attach a rendered **abstract PDF** with
-  `mcp__pdf-highlight-and-deep-link__bookends_attach_abstract_pdf` and **flag it
-  abstract-only** in the report (its quote is an abstract key sentence, not a full-text
-  deep link).
+  `mcp__bookends-mcp__bookends_add_pdf { items:[{ id, path }] }` (local files, direct PDF
+  URLs, or identifier-based retrieval). Verify with
+  `mcp__bookends-mcp__bookends_get_attachment_paths`.
+- **No accessible full text (either path)?** Render the abstract to a one-page PDF
+  yourself — write the citation + abstract as HTML and print it with headless Chrome
+  (same converter as the report, see step 7) — attach that with
+  `mcp__bookends-mcp__bookends_add_pdf`, and **flag it abstract-only** in the report (its
+  quote is an abstract key sentence, not a full-text deep link).
 - **Record each reference's Bookends `id` and its retrieval provenance** (Bookends vs
   Firecrawl-fallback) — the id is the locator for highlighting, linking, and filing; the
   provenance feeds the step-8 audit tally. Respect the AppleScript-bridge quirks in
@@ -497,14 +488,13 @@ cannot be located the script exits non-zero and emits **no link** rather than gu
 page. A reference with no displayable PDF returns `kind: "ref"` and the reference route
 `bookends://sonnysoftware.com/ref/<Library>/<refID>`.
 
-**Do not call `mcp__pdf-highlight-and-deep-link__pdf_link_for_quote` for the URL.** Its
-`deepLink` (`…/selection/…`) and `referenceLink` (bare `…/<refID>`) are both BANNED
-(R-BOOKENDS-PDF-DEEPLINK-02): the first is fabricated by the MCP — Bookends has no such
-route and throws "nil object" — and the second opens the whole library.
+**Never string-template a citation URL.** The `…/selection/…` form and the bare
+`…/<refID>` form are both BANNED (R-BOOKENDS-PDF-DEEPLINK-02): Bookends has no
+`selection` route (it throws "nil object"), and the bare form opens the whole library.
 
 - **Quote links AND `Bookends Citation` links → the Bookends-generated PDF deep link.**
   Build a `refID → link` map by reading `link to displayed PDF` from Bookends for every
-  refID (see R-BOOKENDS-PDF-DEEPLINK-02), then substitute the MCP's page index into the
+  refID (see R-BOOKENDS-PDF-DEEPLINK-02), then substitute the PyMuPDF page index into the
   final path segment:
   `bookends://sonnysoftware.com/pdf/<Library>/<refID>/<attachmentID>/<page0>`.
   Never string-template the `<attachmentID>` — it only ever comes from Bookends.
@@ -515,8 +505,7 @@ route and throws "nil object" — and the second opens the whole library.
 **Never** emit the bare reference-id form `bookends://sonnysoftware.com/<refID>`.
 
 Tips that save reruns: if a quote returns `found:false`, the PDF has irregular spacing
-— shorten to a cleaner, distinctive sub-fragment (or call `pdf_get_layout` to read the
-real token stream) and retry; don't abandon the article, pick another verbatim
+— shorten to a cleaner, distinctive sub-fragment and retry; don't abandon the article, pick another verbatim
 sentence that makes the same point. The call is idempotent. Ensure **every** article
 ends with **1–3 highlighted quotes** (the per-article cards each need 1–3).
 
@@ -531,7 +520,7 @@ concludes, not its title. Keep a running tally for the stance table.
 ### 6. Build ONE combined styled HTML report
 
 Assemble a single self-contained HTML document (inline `<style>`) with the SAME
-sections as the Priapism report, in this order, applying all five format rules:
+sections, in this order, applying all the format rules:
 
 ```
 Header            — title, subtitle, prepared-date, one line on the evidence base
@@ -603,7 +592,7 @@ citation is correct (per *Standing rules*).
 > VERIFIED NON-BLANK PDF in the `<Topic> — Reports` folder**, as its **own dedicated placeholder
 > reference** (title = report name with ` (AI)`, Report/misc reference type, AI-content label 3,
 > deep-link source list in Notes). **A report group that has no report PDF — or only an HTML
-> attachment and no PDF — is a DEFECT:** generate the PDF in the sandbox with WeasyPrint, attach
+> attachment and no PDF — is a DEFECT:** render the PDF with headless Chrome, attach
 > it via the Bookends MCP, and verify it is non-blank with `bookends_get_pdf_content` before
 > considering the run complete.
 
@@ -626,17 +615,15 @@ citation is correct (per *Standing rules*).
 > copy (in the DEVONthink case group) AND the attached PDF (in Bookends)** so either
 > deliverable can reach the other.
 >
-> **NO BARE REFERENCE-ID LINKS — applies to EVERY `bookends://` link in the report (added
-> 2026-07-10, Skala Pediatric-LLD report).** That report shipped with per-source "Open in
-> Bookends" links AND highlighted-quote links in the bare reference-id form
-> `bookends://sonnysoftware.com/<id>`. That form selects the reference inside the FULL library
-> list, so the target appears amid unrelated MARKED references from other reports — not in its
-> own report's context. Ban it for EVERY link:
+> **NO BARE REFERENCE-ID LINKS — applies to EVERY `bookends://` link in the report.** The bare
+> reference-id form `bookends://sonnysoftware.com/<id>` selects the reference inside the FULL
+> library list, so the target appears amid unrelated MARKED references from other reports — not
+> in its own report's context. Ban it for EVERY link:
 > - **Quote / highlighted-passage links → the Bookends-generated PDF deep link**
 >   `bookends://sonnysoftware.com/pdf/<Library>/<refID>/<attachmentID>/<page0>`
->   (R-BOOKENDS-PDF-DEEPLINK-02). Use `pdf_link_for_quote` ONLY to write the persistent
->   highlight and to learn the page index; its `deepLink` (`…/selection/…`) is fabricated,
->   throws "nil object", and is BANNED. Never hand-fabricate a link.
+>   (R-BOOKENDS-PDF-DEEPLINK-02), read back from Bookends. The persistent highlight and the
+>   page index come from `scripts/highlight_and_link.py` (PyMuPDF). The `…/selection/…` form
+>   throws "nil object" and is BANNED. Never hand-fabricate a link.
 > - **Per-source links → the DUAL PAIR (R-BOOKENDS-DUAL-LINK-01, added 2026-07-11).** The
 >   single ambiguous "Open in Bookends" link is RETIRED. EVERY citation/source — in the
 >   Summary/Source-type table, the per-article cards, the References list, and anywhere else a
@@ -674,27 +661,32 @@ citation is correct (per *Standing rules*).
     placeholder by the exact report title in the Reports subgroup and reuse it; if the report PDF
     is ever found attached to an arbitrary reference, **detach it** from that reference (never
     delete the reference or its own PDF) and re-attach it to the dedicated placeholder.
-  - **HTML→PDF conversion — ALWAYS generate the PDF in the sandbox with WeasyPrint, then
-    attach it via the Bookends MCP. This sandbox-generate-then-MCP-attach flow is the
-    standard, non-negotiable procedure** (it works from a fully background / Dispatch run):
-    1. **Generate the PDF in the sandbox.** Write the finalized HTML into the sandbox and
-       convert it to PDF with **WeasyPrint** (`weasyprint <report>.html <report>.pdf`, or
-       the `weasyprint` Python API) — a fully background/headless conversion that preserves
-       the in-text hyperlinks/anchors as clickable link annotations, both the web citation
-       links (`https://doi.org/…`, PubMed / PMC) **AND** the custom-scheme `bookends://…`
-       "Open in Bookends" deep links. **NO computer-use** (no mouse, keyboard, or
-       screenshots). If WeasyPrint isn't present in the sandbox, `pip install weasyprint
-       --break-system-packages` first.
+  - **HTML→PDF conversion — render with HEADLESS CHROME, then attach via the Bookends MCP.
+    This render-then-MCP-attach flow is the standard, non-negotiable procedure** (it works
+    from a fully background run — no mouse, keyboard or screenshots):
+    1. **Render the PDF with headless Chrome, on the Mac.** Write the finalized HTML to a
+       temp path on the Mac and print it:
+
+       ```
+       "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+         --headless=new --disable-gpu --no-pdf-header-footer \
+         --print-to-pdf="<report>.pdf" "<report>.html"
+       ```
+
+       Chrome is the approved converter: it is a headless, background-safe render that
+       **preserves in-text hyperlinks as clickable link annotations — including
+       custom-scheme `bookends://…` links** (verified: the `bookends://` annotations survive
+       the print), alongside the web citation links (`https://doi.org/…`, PubMed / PMC).
+       Run the command through `mcp__bookends-mcp__bookends_applescript_run`
+       (`do shell script "…"`) so the file lands on the same filesystem Bookends can read.
     2. **Attach via the Bookends MCP directly — never via a mounted host folder.** Attach
-       the sandbox PDF to the report reference with
-       `mcp__bookends-mcp__bookends_add_pdf { items:[{ id, path }] }` (or
-       `mcp__pdf-highlight-and-deep-link__bookends_attach_pdf { id, pdf_path }`). Bookends
-       copies the file into its **own Attachments folder** itself. **Do NOT** call
+       the rendered PDF to the report reference with
+       `mcp__bookends-mcp__bookends_add_pdf { items:[{ id, path }] }`. Bookends copies the
+       file into its **own Attachments folder** itself. **Do NOT** call
        `request_cowork_directory` / rely on a mounted host folder, and **do NOT** hand-write
-       the PDF into `~/Documents/Bookends/Attachments/` yourself — in a background /
-       Dispatch run the folder-grant prompt is never answered, so the MCP-attach path is the
-       only reliable route. (Headless Chrome / wkhtmltopdf are NOT the documented converter
-       for this report PDF — use WeasyPrint.)
+       the PDF into `~/Documents/Bookends/Attachments/` yourself — in a background run the
+       folder-grant prompt is never answered, so the MCP-attach path is the only reliable
+       route.
     - **MANDATORY link-annotation verification — REQUIRED; the run FAILS if it does not
       pass.** Dump the PDF's link annotations (background/headless, **NO computer-use** —
       e.g. with `pypdf`: iterate every page's `/Annots` and collect each annotation's
@@ -702,8 +694,7 @@ citation is correct (per *Standing rules*).
       (`https://doi.org/…`, PubMed / PMC) **AND** (b) at least one `bookends://…` link. If
       either class is missing or flattened, **STOP: do NOT ship a link-less report** — treat
       the run as FAILED and regenerate the HTML/PDF until the check passes.
-    - **MANDATORY link-validation gate — REQUIRED; the run FAILS otherwise (added 2026-07-10;
-      extended 2026-07-11 for R-BOOKENDS-DUAL-LINK-01 and R-BOOKENDS-PDF-DEEPLINK-02).** Run
+    - **MANDATORY link-validation gate — REQUIRED; the run FAILS otherwise.** Run
       `python3 scripts/validate_bookends_links.py <report.html>`; it scans BOTH the finished
       HTML and the attached PDF's link annotations and asserts ALL FOUR:
       1. **ZERO bare reference-id links** — no `bookends://sonnysoftware.com/` followed

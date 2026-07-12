@@ -16,7 +16,7 @@ doc/docx/rtf/text files.  It CANNOT render a raw .html file.  The Bookends User 
 
 So a report reference whose attachment is the report HTML shows the FILENAME in the
 bottom bar and an EMPTY attachments pane.  It looks like nothing is attached.  That is
-the 2026-07-11 defect: the deep-link pipeline (and the link-repair sweep) left the HTML
+a known defect mode: the deep-link pipeline (and the link-repair sweep) can leave the HTML
 render attached to Bookends report references instead of the hyperlink-preserving PDF.
 
 Two further ways a report attachment goes dark, both also checked here:
@@ -36,7 +36,7 @@ INVARIANTS ENFORCED (any violation = FATAL, do not ship)
 
 Usage:
     validate_bookends_attachment.py 95928 13738 ...      # explicit reference ids
-    validate_bookends_attachment.py --group "Priapism — Reports"
+    validate_bookends_attachment.py --group "<Topic> — Reports"
     validate_bookends_attachment.py --all-reports        # every "… Reports" group
 
 Exit code 0 = all pass.  Non-zero = at least one FATAL violation.

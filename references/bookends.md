@@ -113,31 +113,41 @@ Workarounds:
 ## 3. Highlight a quote + build a RESOLVABLE deep link
 
 ```
-mcp__pdf-highlight-and-deep-link__pdf_link_for_quote
-  params: { "locator": "<bookends id or bookends:// URL>", "quote": "<verbatim fragment>" }
+python3 scripts/highlight_and_link.py --ref <id> --quote "<verbatim fragment>"
+  -> { "page": <0-based>, "url": "bookends://…/pdf/<Lib>/<id>/<attachmentID>/<page>",
+       "kind": "pdf" | "ref", "highlighted": true }
 ```
 
-This writes a persistent highlight into the attached PDF and returns the match's **page
-index**, a **`referenceLink`** (`bookends://sonnysoftware.com/<refID>`), and a legacy
-`deepLink` of the form:
+PyMuPDF writes the persistent highlight and resolves the page; the URL is **read back out
+of Bookends** (`link to displayed PDF`) with only the page substituted.
+
+The **pdf-highlight-and-deep-link MCP** is no longer used for the link. For reference, its
+`pdf_link_for_quote` returns a `referenceLink` (`bookends://sonnysoftware.com/<refID>`)
+and a `deepLink` of the form:
 
 ```
 bookends://sonnysoftware.com/selection/<Library>/<id>/0/<page>/0/0/0/0
 ```
 
-**Do NOT use that `selection` `deepLink` as the quote's `href`.** It is a *fabricated* URL:
-the segment where Bookends expects a real attachment/annotation id is `0`. When the link is
-followed, Bookends tries to resolve object id `0`, finds nothing, and shows **"An error has
-occurred: nil object."** (The browser → macOS → Bookends hand-off itself works; the failure
-is Bookends resolving the nil target.) `selection/…` is **not** one of Bookends' documented
-link types.
+**⛔ R-BOOKENDS-PDF-DEEPLINK-02 (2026-07-11): NEVER use that `deepLink`.** Bookends implements
+no `selection` route; it dereferences a nil object and raises the modal **"An error has
+occurred: nil object."** This was reproduced empirically on 2026-07-11 (Skala Pediatric-LLD
+report: all 131 citation links used this form and every one of them errored). Take from the
+MCP only the **persistent highlight** and the **page index**; discard `deepLink` and
+`referenceLink`.
 
-Use one of Bookends' **supported, self-emitted** link forms instead:
+**The `referenceLink` — the bare `bookends://sonnysoftware.com/<refID>` form — is BANNED.**
+It selects the reference inside the FULL marked library, dropping the reader into unrelated
+citations ("soup"). Never emit it for anything.
 
-- **Reference link** — `bookends://sonnysoftware.com/<refID>` — selects the reference. This
-  is what Bookends' Edit → Copy Link produces and what the original "excellent" Priapism
-  report used. Always resolves. Available directly as the MCP's `referenceLink`.
-- **Page-accurate PDF link** —
+Supported forms, and what each is for:
+
+- **Group link** — `bookends://sonnysoftware.com/group/<LibraryName>/<URL-encoded group name>` —
+  opens that group. This is the **`Bookends Group`** link required on every source
+  (R-BOOKENDS-DUAL-LINK-01): point it at the source's **subtopic child group**.
+  `<LibraryName>` (e.g. `Library1`, from AppleScript `name of front library window` minus
+  `.bdb`) is REQUIRED; percent-encode the name (space→`%20`, em dash→`%E2%80%94`, `&`→`%26`).
+- **Page-accurate PDF link — the ONLY valid Citation/quote link** —
   `bookends://sonnysoftware.com/pdf/<Library>/<refID>/<attachmentID>/<page0>` — opens the
   attached PDF at `<page0>` (0-based). This is exactly the string Bookends' PDF-viewer
   "Copy Link" and the AppleScript `link to displayed PDF` property emit. Get the real
@@ -196,10 +206,12 @@ field and send a plain-paste keystroke via System Events; otherwise leave the st
 the clipboard and tell the user to press ⌘V into the Notes field. Either way this is **in
 addition to** the attached HTML report and the iCloud copy — those stay unchanged.
 
-## 3b. Two links per reference — web citation link + Open-in-Bookends link
+## 3b. Three links per reference — web citation + Bookends Group + Bookends Citation
+## (R-BOOKENDS-DUAL-LINK-01, 2026-07-11)
 
-Every reference in the report (per-article cards AND the Vancouver References list) carries
-**two distinct links**:
+Every reference in the report (Summary/Source-type table, per-article cards, AND the
+Vancouver References list — **anywhere a per-source link is emitted**) carries **three
+distinct affordances**:
 
 - **Citation → the article on the web.** Hyperlink the citation text (and the shown title)
   to the article online, built from the Bookends record in priority order:
@@ -209,13 +221,25 @@ Every reference in the report (per-article cards AND the Vancouver References li
 
   Pull `doi`, `pmid`, and `url` from the record (e.g. `bookends_get_properties`). If none of
   the three exist, leave the citation as **plain text** (no dead link) and say so.
-- **"· Open in Bookends" → the item in Bookends.** A separate affordance carrying the
-  corrected `bookends://` deep link (§3 — page-accurate `pdf/…` form or reference-level
-  fallback), delivered as styled clickable text (§3a).
+- **"· Bookends Group" → the source's subtopic group.** The library-qualified group link
+  `bookends://sonnysoftware.com/group/<LibraryName>/<URL-encoded group name>` (§3). Lands the
+  reader among that report's sibling sources.
+- **"· Bookends Citation" → that specific reference / its PDF.** The Bookends-generated PDF
+  deep link `bookends://sonnysoftware.com/pdf/<Library>/<refID>/<attachmentID>/<page0>` (§3),
+  read back from `link to displayed PDF` with the highlight's page substituted. The
+  `…/selection/…` form is BANNED (R-BOOKENDS-PDF-DEEPLINK-02) — it throws "nil object".
 
-Render the two so they are visually distinct (rule 6): the citation opens the paper online;
-the "Open in Bookends" tag opens the app. This applies identically in Part I cards and the
-References list; the Academic Summary stays plain-text / Word-ready.
+Render all three so they are visually distinct (rule 6). Label the two Bookends links
+**exactly** `Bookends Group` and `Bookends Citation` — never one ambiguous "Open in
+Bookends". Deliver as styled clickable text (§3a). This applies identically in the
+Summary table, the Part I cards, and the References list; the Academic Summary stays
+plain-text / Word-ready. Example rendering:
+
+```html
+<strong><a href="https://doi.org/10.1007/xxxxx">Source title</a></strong>
+ · <a href="bookends://sonnysoftware.com/group/Library1/Topic%20%E2%80%94%20Subtopic">Bookends Group</a>
+ · <a href="bookends://sonnysoftware.com/pdf/Library1/8721/1783717403/3">Bookends Citation</a>
+```
 
 ## 4. Vancouver References (the one format change)
 

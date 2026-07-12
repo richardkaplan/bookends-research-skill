@@ -157,6 +157,84 @@ deep-linked verbatim quotes, a navigable narrative synthesis, a Word-ready Acade
 Summary, and a Vancouver References list — saved into Bookends and to your iCloud
 `RESEARCH_DIR`.
 
+## Run a report on a DEVONthink group
+
+You don't have to start from a typed question. You can point this skill at a
+**DEVONthink group** and ask for a Bookends research report **about the material in
+that group**. The skill:
+
+1. **Reads the group's documents** to work out the pertinent topics and questions — you
+   don't have to spell them out.
+2. **Searches the peer-reviewed literature** on those topics, Bookends-first (Bookends'
+   own search / identifier retrieval / PDF download, falling back to Firecrawl / PubMed
+   only when Bookends can't retrieve a source).
+3. **Builds the same deep-linked, highlighted evidence report** described above — an
+   executive summary, a stance/source-type table, per-article cards with `bookends://`
+   deep-linked verbatim quotes, a navigable narrative synthesis, and a Vancouver
+   References list.
+4. **Saves the HTML report back into that same DEVONthink group** (labeled AI content)
+   and **attaches a verified PDF of the report in a matching Bookends group**.
+
+So your source collection and the literature synthesis about it end up side by side, in
+the two apps you already use.
+
+### Automatic cross-links (the headline feature)
+
+Every report produced this way carries **two navigation links near the top**:
+
+- a link to the **source DEVONthink group** — `x-devonthink-item://…`
+- a link to the **matching Bookends folder** — the library-qualified group link
+  `bookends://sonnysoftware.com/group/<LibraryName>/<URL-encoded group name>`
+
+Both links are embedded in **both** copies of the report — the DEVONthink HTML **and**
+the Bookends PDF. One click takes you from your source material in DEVONthink to the
+literature synthesis in Bookends, and one click takes you back. The source documents
+and the evidence report stay linked in **both directions**, in **both apps**, so you
+never lose the thread between "what I collected" and "what the literature says about
+it" — and anyone you hand the report to can jump straight to either side.
+
+### How to invoke it
+
+Point the skill at the group and ask for a report, for example:
+
+- `Run the Bookends Research Skill on DEVONthink group <UUID>`
+- Paste the group's `x-devonthink-item://<UUID>` link and say
+  `Bookends deep-link report on the topics in this group`
+- `Do a Bookends literature report on the contents of <group name>`
+
+The skill reads the group, decides the topics, and produces the cross-linked report —
+no separate topic list required.
+
+### Storage & privacy
+
+Reports live in **DEVONthink and Bookends — both local, on-disk apps**. Bookends is
+fine for **PHI / private case material**: those copies never leave your machine. The
+optional **iCloud** HTML copy is for **de-identified / non-PHI research only** — don't
+route private case material through it.
+
+## Not just medicine
+
+The DEVONthink-group → Bookends-literature-report workflow is **domain-agnostic**.
+Medicine is one strong use case, not the only one. Any time you keep a collection of
+source documents in a DEVONthink group and want a cited literature synthesis with
+cross-navigation back to those sources, the same pipeline applies. For example:
+
+- **Law** — a case/matter group of pleadings, contracts, or statutes → a report
+  synthesizing the controlling case law and secondary authority on the legal issues
+  raised.
+- **Academic / social science** — a group of primary sources or field notes → a
+  literature review of the scholarship on the theme.
+- **Engineering / patents** — a group of specifications or prior-art documents → a
+  synthesis of the relevant technical literature and standards.
+- **Finance / policy** — a group of filings, market reports, or regulations → an
+  evidence report on the pertinent economic or policy research.
+- **History / journalism** — a group of archival documents → a synthesis of the
+  secondary historical literature on the events.
+
+In every case the deliverable is the same: one deep-linked, highlighted evidence
+report, saved into the DEVONthink group and attached in a matching Bookends group, with
+automatic two-way links between the two.
+
 ## Configuration
 
 The only path setting is **`RESEARCH_DIR`**, defined once near the top of `SKILL.md`.
@@ -173,10 +251,26 @@ skill is safe to share publicly.
 
 ## Dependencies
 
+- **PyMuPDF** (required) — `pip install pymupdf` (gives `import fitz`). Quote location,
+  persistent highlight writing, and page resolution, run against the real PDF by
+  `scripts/highlight_and_link.py`. It is also the only trustworthy way to read the links
+  back out of a rendered report PDF: link annotations often sit inside compressed object
+  streams, so `grep`/`strings` miss them and will call a fully broken PDF clean (in this
+  library a `strings` audit found 5 broken report renders; PyMuPDF found 30).
+- **PyObjC/Quartz** (required for validation) — `pip install pyobjc-framework-Quartz`, so
+  `scripts/validate_bookends_links.py` can see whether Bookends raised a modal alert.
+  Without it the validator fails closed rather than passing blind.
 - **bookends-mcp** — Bookends reference/group/attachment operations.
-- **pdf-highlight-and-deep-link MCP**
-  (`github.com/richardkaplan/pdf-highlight-and-deep-link-mcp`) — quote location,
-  persistent highlight writing, and `bookends://` deep-link generation.
+- **pdf-highlight-and-deep-link MCP** (optional)
+  (`github.com/richardkaplan/pdf-highlight-and-deep-link-mcp`). **Its link generation is
+  NOT used.** `pdf_link_for_quote` returns a `deepLink` in the `bookends://…/selection/…`
+  form, and Bookends has no such route — the MCP *fabricates* that URL whenever its own
+  call into Bookends fails, silently. Ten reports shipped that way; every citation link
+  in them threw "An error has occurred: nil object" on the first click, and nothing
+  caught it because `open` exits 0 even when Bookends raises the dialog. The citation URL
+  is therefore always **read back from Bookends itself** (`link to displayed PDF`), which
+  yields `bookends://sonnysoftware.com/pdf/<Library>/<refID>/<attachmentID>/<page0>`; the
+  `<attachmentID>` is opaque and can never be derived or templated.
 - **Firecrawl Research** (or PubMed) — fallback source discovery only, for articles
   Bookends cannot retrieve itself.
 
@@ -215,13 +309,21 @@ child agents can then load **Bookends Research Skill** without any per-session s
 skill claimed Bookends' viewer "cannot follow `bookends://` links on any click." That was
 wrong. The `bookends://` scheme works fine inside Bookends — two things have to be right:
 
-- **Use a link form Bookends can resolve.** A reference link
-  `bookends://sonnysoftware.com/<refID>` and a page-accurate PDF link
-  `bookends://sonnysoftware.com/pdf/<Library>/<refID>/<attachmentID>/<page0>` both resolve
-  (these are the strings Bookends itself emits via Copy Link / `link to displayed PDF`). The
-  old `…/selection/<Library>/<id>/0/0/0/0/0/0` form does **not**: its zero (nil)
-  attachment/annotation id makes Bookends throw **"An error has occurred: nil object"** when
-  the link is followed. The skill now emits only the supported forms.
+- **Use a link form Bookends can resolve — and the right one for the job.** Two forms are
+  used, and **every source carries BOTH** (R-BOOKENDS-DUAL-LINK-01, 2026-07-11):
+  - **`Bookends Group`** → `bookends://sonnysoftware.com/group/<LibraryName>/<URL-encoded group name>`
+    — opens the source's subtopic group (its sibling sources).
+  - **`Bookends Citation`** → `bookends://sonnysoftware.com/pdf/<Library>/<refID>/<attachmentID>/<page0>`
+    — opens that specific reference / its PDF at the quote's page. **R-BOOKENDS-PDF-DEEPLINK-02
+    (2026-07-11): this URL must be READ BACK FROM BOOKENDS** (AppleScript `link to displayed
+    PDF`), never string-templated — `<attachmentID>` is opaque and unguessable.
+
+  The **bare reference-id form `bookends://sonnysoftware.com/<refID>` is BANNED** — it drops
+  the reader into the whole marked library, amid unrelated references. The
+  **`…/selection/<Library>/<refID>/…` form is BANNED** — Bookends has no such route and throws
+  the modal "An error has occurred: nil object." Gate every report on
+  `scripts/validate_bookends_links.py`, which fails the build on either form and verifies
+  every `/pdf/` link live against the library.
 - **Put the link in as styled text.** A `bookends://` link is clickable only when it sits in
   a Bookends field (Notes or User1–User4) as **styled text with the live hyperlink**. When
   pasting a link into a Bookends field, use a normal styled **Paste (`⌘V`)** — **not "Paste

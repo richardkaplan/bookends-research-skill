@@ -306,14 +306,79 @@ plain text.
 
 ## Optional: reporting on a DEVONthink group
 
-If you also use DEVONthink and have a DEVONthink MCP server connected, you can point the
-skill at a DEVONthink group instead of typing a question. It reads the group's documents,
-works out the pertinent topics itself, runs the same pipeline, saves the HTML report back
-into that group, and cross-links the two: the report carries a link to the source DEVONthink
-group and a link to the matching Bookends folder, in both copies.
+*This section is only for people who **also use DEVONthink**. It is an optional extra, not a
+requirement: the skill's main path needs Bookends and nothing else. It depends on a DEVONthink
+MCP server, which is not part of this repo — if you don't have one, skip this section entirely
+and nothing else changes.*
 
-This path depends on a DEVONthink MCP server, which is not part of this repo. If you don't
-have one, ignore this section — the skill's main path doesn't need DEVONthink.
+If you keep folders of source documents in DEVONthink — papers, reports, filings, primary
+sources, whatever you have collected — you can point the skill at a group instead of typing out
+a question. In DEVONthink, right-click the group → **Copy Item Link** (you get an
+`x-devonthink-item://…` URL) and hand that to Claude.
+
+There are two ways to run it: let Claude work out the questions from the documents, or bring
+your own.
+
+### A. Let it work out the questions
+
+You have a folder of material and you want to know what the published literature says about
+whatever is actually in it. You don't spell out the topics — Claude reads the documents and
+decides what the live questions are.
+
+**A1 — a folder of clinical papers**
+
+> **Here's a DEVONthink group: `x-devonthink-item://<your-group-uuid>`**
+> **Run the Bookends Research Skill on it — read the documents, work out the pertinent issues
+> they raise, and research those.**
+
+Claude opens the group, reads each document, extracts the questions the collection is really
+circling (say: how well blood concentration tracks impairment, whether roadside tests are
+valid, what happens in long-term users), and runs the normal pipeline on them.
+
+**A2 — a folder of policy papers** (it is not a medicine-only feature)
+
+> **This DEVONthink group — `x-devonthink-item://<your-group-uuid>` — has the consultation
+> responses and impact assessments I've collected on short-term rental regulation. Read them,
+> figure out the contested questions, and run the Bookends Research Skill on those.**
+
+Same behavior, different field: Claude works out that the collection is arguing about housing
+supply effects, enforcement costs, and displacement, and researches the empirical literature on
+each.
+
+### B. Bring your own questions
+
+Same group link, but you already know what you want answered about it. Claude still reads the
+documents for context, then researches *your* questions rather than inferring its own.
+
+**B1 — specific questions about a document set**
+
+> **Here's a DEVONthink group: `x-devonthink-item://<your-group-uuid>`. Run the Bookends
+> Research Skill on it, focused on these questions: (1) how well does blood concentration
+> actually predict impairment? (2) do the roadside screening tests hold up? (3) what does the
+> evidence show for long-term daily users?**
+
+**B2 — test a claim the documents make**
+
+> **The documents in `x-devonthink-item://<your-group-uuid>` are the expert reports and filings
+> in a matter I'm working on. Run the Bookends Research Skill: what does the peer-reviewed
+> literature actually say about the causation theory they rely on, and is the claim that the
+> effect persists years after exposure supported?**
+
+Claude reads the documents to ground itself in what they assert, then goes to the literature to
+answer exactly what you asked — including, where the evidence points that way, that a claim
+isn't supported.
+
+### What you get, either way
+
+The usual Bookends output — a new Bookends group for the topic, the literature retrieved and
+filed into subtopic folders, the PDFs attached and highlighted, and the report PDF in its
+`Reports` folder — **plus a separate HTML copy of the report filed back into the DEVONthink
+group your documents live in.**
+
+Both copies carry two cross-navigation links at the top: one back to the **source DEVONthink
+group**, one to the **matching Bookends folder**. So the report sits beside the material it was
+written about, one click from your documents and one click from the library — and the Bookends
+side links back the other way.
 
 ---
 

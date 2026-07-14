@@ -8,24 +8,32 @@ link because `open` returned 0. `open` returns 0 even when Bookends then throws
 "An error has occurred: nil object" — that false signal is exactly what lets a
 earlier "the links are fixed" reports ship broken.
 
+NO PDF LIBRARY BEYOND pypdf
+---------------------------
+This validator reads PDFs with `pypdf` only (link annotations, page counts,
+page-0 corroboration). There is NO PyMuPDF / `fitz` dependency anywhere in this
+skill — the highlight, the page and the deep link all come from the Bookends MCP
+(`bookends_annotate_pdf` with mode="exact", then `bookends_get_pdf_content`
+mode="annotations"). Do not reintroduce a PDF library to do that work.
+
 PAGE CONVENTION — PROVEN, DO NOT RE-LITIGATE
 -------------------------------------------
     bookends://sonnysoftware.com/pdf/<Library>/<refID>/<attachmentID>/<page>
 
-`<page>` is **0-BASED**. The PyMuPDF page index is used RAW — never +1.
-Boundary-proven on a 31-page PDF: `/30` is accepted, `/31` is rejected.
+`<page>` is **0-BASED**. Boundary-proven on a 31-page PDF: `/30` is accepted,
+`/31` is rejected.
 
-The page MUST come from PyMuPDF resolution of the QUOTE inside the cited PDF
-(highlight annotation > exact text > prefix > fuzzy > single-page > sole-
-highlight). It must NEVER be harvested from Bookends' `link to displayed PDF`
-readback: that link reports whichever page Bookends currently happens to be
-showing — which is page 0 for a freshly-opened PDF. Harvesting it produced ~593
-links that all ended in `/0` and opened every source on its cover page instead
-of the quoted passage. That is the bug this validator exists to catch.
+The page MUST come from the ANNOTATION Bookends wrote over the quote — the
+annotation-anchored deep link `bookends_get_pdf_content` returns. It must NEVER
+be harvested from Bookends' `link to displayed PDF` readback: that link reports
+whichever page Bookends currently happens to be showing — which is page 0 for a
+freshly-opened PDF. Harvesting it produced ~593 links that all ended in `/0` and
+opened every source on its cover page instead of the quoted passage. That is the
+bug this validator exists to catch.
 
-`link to displayed PDF` is still read back — but only for the two things it is
-authoritative about: the OPAQUE attachmentID, and (after firing a URL) which
-page Bookends actually navigated to.
+`link to displayed PDF` is still read back — but only for what it is
+authoritative about: after firing a URL, which PDF/page Bookends actually
+navigated to.
 
 WHAT IT ACTUALLY CHECKS
 -----------------------
@@ -46,7 +54,7 @@ NAVIGATION:
      * OBSERVED NAVIGATION: park Bookends on a decoy reference, fire the URL,
        then ask Bookends which PDF it is NOW displaying. PASS requires the
        expected PDF to be on screen.
-     * the page index must be inside the PDF (PyMuPDF page count).
+     * the page index must be inside the PDF (pypdf page count).
 
   3. /ref/<Lib>/<ref> — the fallback for a reference with NO displayable PDF
      (no /pdf/ link can exist for it). OBSERVED NAVIGATION: fire it, then read
@@ -67,7 +75,7 @@ SURFACES
 --------
   --html PATH   an HTML report (iCloud copy, Bookends HTML attachment, …)
   --pdf  PATH   a PDF render (links read from the real PDF link ANNOTATIONS with
-                PyMuPDF — `strings`/grep miss annotations inside compressed
+                pypdf — `strings`/grep miss annotations inside compressed
                 object streams and will happily call a fully-broken report clean)
   --dt   UUID   a DEVONthink HTML record (source read via AppleScript)
 
@@ -206,17 +214,36 @@ def placeholders_in_html(text):
     return [u for u in ANY.findall(text) if ELLIPSIS in u]
 
 
+def _pdf_annot_uris(page):
+    """Every /A/URI on a pypdf page object."""
+    out = []
+    try:
+        annots = page.get("/Annots") or []
+    except Exception:
+        return out
+    for a in annots:
+        try:
+            obj = a.get_object()
+            act = obj.get("/A")
+            if act is None:
+                continue
+            uri = act.get_object().get("/URI")
+            if uri:
+                out.append(str(uri))
+        except Exception:
+            continue
+    return out
+
+
 def links_in_pdf(path):
     """PDF link ANNOTATIONS — the only trustworthy read. grep/strings cannot see
-    annotations stored in compressed object streams."""
-    import fitz  # PyMuPDF
+    annotations stored in compressed object streams. Read with pypdf (no PyMuPDF)."""
+    from pypdf import PdfReader
     out = []
-    with fitz.open(path) as doc:
-        for page in doc:
-            for l in page.get_links():
-                u = l.get("uri") or ""
-                if u.startswith("bookends://"):
-                    out.append(u)
+    for page in PdfReader(path).pages:
+        for u in _pdf_annot_uris(page):
+            if u.startswith("bookends://"):
+                out.append(u)
     return out
 
 
@@ -232,9 +259,8 @@ def links_in_dt(uuid):
 
 def page_count(path):
     try:
-        import fitz
-        with fitz.open(path) as doc:
-            return doc.page_count
+        from pypdf import PdfReader
+        return len(PdfReader(path).pages)
     except Exception:
         return None
 
@@ -320,7 +346,7 @@ class Verifier:
                                "citation link into it cannot resolve" % rid)
             # The library, the refID and the OPAQUE attachmentID must be exactly
             # what Bookends emits — they cannot be derived. The PAGE is ours to set
-            # (PyMuPDF resolves it from the quote); Bookends' own link merely
+            # (the Bookends annotation carries it); Bookends' own link merely
             # reports whichever page it happens to be displaying, so page equality
             # is NOT required — only that the page exists in the PDF.
             tm = PDFL.match(link)
@@ -412,30 +438,37 @@ def _page0_corroboration(rid, path, quotes):
       * the source PDF has exactly ONE page — page 0 is the only page there is;
       * a HIGHLIGHT annotation physically sits on page 0 — someone marked the
         passage there;
-      * the quote text is literally FOUND on page 0 by PyMuPDF.
+      * the quote text is literally FOUND on page 0.
     No evidence => page 0 was asserted, not resolved. That is the bug.
     """
     if not path or not os.path.exists(path):
         return None, "source PDF unreadable — page 0 cannot be corroborated"
     try:
-        import fitz
+        from pypdf import PdfReader
     except ImportError:
-        return None, "PyMuPDF unavailable — page 0 cannot be corroborated"
-    with fitz.open(path) as doc:
-        if doc.page_count == 1:
-            return "single-page source", ""
-        p0 = doc[0]
-        for a in (p0.annots() or []):
-            if a.type[0] == 8:                       # 8 = highlight
+        return None, "pypdf unavailable — page 0 cannot be corroborated"
+    reader = PdfReader(path)
+    n = len(reader.pages)
+    if n == 1:
+        return "single-page source", ""
+    p0 = reader.pages[0]
+    for a in (p0.get("/Annots") or []):
+        try:
+            if a.get_object().get("/Subtype") == "/Highlight":
                 return "highlight annotation on page 0", ""
-        if quotes:
-            t = re.sub(r"\s+", " ", p0.get_text()).strip().lower()
-            for q in quotes:
-                q = re.sub(r"\s+", " ", (q or "")).strip().lower()[:70]
-                if len(q) >= 30 and q in t:
-                    return "quote text found on page 0", ""
-        return None, ("%d-page source with no highlight on page 0 and no quote text "
-                      "matching page 0" % doc.page_count)
+        except Exception:
+            continue
+    if quotes:
+        try:
+            t = re.sub(r"\s+", " ", p0.extract_text() or "").strip().lower()
+        except Exception:
+            t = ""
+        for q in quotes:
+            q = re.sub(r"\s+", " ", (q or "")).strip().lower()[:70]
+            if len(q) >= 30 and q in t:
+                return "quote text found on page 0", ""
+    return None, ("%d-page source with no highlight on page 0 and no quote text "
+                  "matching page 0" % n)
 
 
 def check_all_page_zero(links, pdf_path_for_ref, quotes_for_ref=None):
@@ -444,7 +477,7 @@ def check_all_page_zero(links, pdf_path_for_ref, quotes_for_ref=None):
     Every /pdf/ citation on a surface ending in `/0` is the signature of a page
     segment harvested from Bookends' `link to displayed PDF` readback (which
     reports the page Bookends happens to be showing — page 0 for a freshly
-    opened PDF) instead of resolved from the quote with PyMuPDF.
+    opened PDF) instead of taken from the annotation Bookends wrote over the quote.
 
     It is not enough for the pages to LOOK plausible: page 0 must be
     CORROBORATED for every cited reference (see _page0_corroboration). Any
@@ -467,14 +500,15 @@ def check_all_page_zero(links, pdf_path_for_ref, quotes_for_ref=None):
         return None
     return ("ALL %d /pdf/ citation(s) on this surface point at page 0 — the fingerprint of "
             "pages harvested from Bookends' displayed page instead of resolved from the "
-            "quote with PyMuPDF. %d cited reference(s) have NO evidence for page 0: %s. "
-            "Resolve each quote with PyMuPDF (highlight > exact text > prefix > fuzzy) and "
-            "rewrite the page segment; the page is 0-BASED and the PyMuPDF index is used raw."
+            "annotation Bookends wrote over the quote. %d cited reference(s) have NO evidence "
+            "for page 0: %s. "
+            "Re-highlight each quote with bookends_annotate_pdf (mode=exact) and take the page "
+            "from the annotation-anchored deep link; the page is 0-BASED."
             % (len(pdfs), len(unsupported), "; ".join(unsupported[:6])))
 
 
 def quotes_by_ref(path):
-    """refID -> [quote, …] from the PyMuPDF resolver's report, so page 0 can be
+    """refID -> [quote, …] from the annotate-and-link step's log, so page 0 can be
     corroborated against the actual quoted text."""
     if not path or not os.path.exists(path):
         return lambda rid: []
@@ -488,7 +522,7 @@ def quotes_by_ref(path):
 
 
 def check_resolution(path):
-    """FAIL on any quote whose page PyMuPDF could not resolve.
+    """FAIL on any quote whose page was never resolved.
 
     `path` is the resolution report the page-resolver writes: a JSON map of
     surface -> {"links": [{"rid":…, "quote":…, "new_page": int|null,
@@ -514,7 +548,8 @@ def check_resolution(path):
         return None
     refs = sorted({b[1] for b in bad})
     return ("%d citation(s) across %d surface(s) have an UNRESOLVED quote page "
-            "(refs: %s). PyMuPDF could not locate the passage in the source PDF — "
+            "(refs: %s). bookends_annotate_pdf (mode=exact) never matched the passage in the "
+            "source PDF, which means the QUOTE IS WRONG — "
             "highlight the passage in Bookends, or drop the citation. Do not ship a "
             "link whose page is a guess." % (len(bad), len({b[0] for b in bad}),
                                              ", ".join(refs[:8])))
@@ -555,7 +590,7 @@ def main():
                          "TWO (any references WITH a PDF) so a probe never parks on "
                          "the reference it is about to test.")
     ap.add_argument("--resolution-report",
-                    help="pagemap JSON from the PyMuPDF quote resolver; any link with "
+                    help="pagemap JSON from the annotate-and-link step; any link with "
                          "new_page=null (unresolved quote page) is a hard FAIL")
     ap.add_argument("--json")
     ap.add_argument("--truth-cache",

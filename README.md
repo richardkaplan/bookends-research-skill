@@ -76,10 +76,12 @@ Server**. If you are on an older Bookends, upgrade first; the skill cannot work 
 **Claude Cowork** (or Dispatch) — the agent mode of the Claude desktop app, which is where
 skills run.
 
-**Python 3** with a few packages (`pymupdf`, `pyobjc-framework-Quartz`, `pypdf`). **You do
-not have to install these yourself** — Claude Cowork can do it for you as part of the
-install prompt below. They are what let the skill open a PDF, find the quoted sentence,
-write the highlight, and verify that every link in the finished report really resolves.
+**Python 3** with two small packages (`pyobjc-framework-Quartz`, `pypdf`). **You do not have
+to install these yourself** — Claude Cowork can do it for you as part of the install prompt
+below. They are only used by the pre-ship validators, to verify that every link in the
+finished report really resolves. **The highlighting itself needs no PDF library at all**:
+Bookends' own MCP finds the quoted sentence, writes the highlight, and hands back a deep
+link anchored to it. (There is deliberately **no PyMuPDF** dependency — do not add one.)
 
 **Google Chrome** — almost certainly already on your Mac. It is used *headlessly* (no window
 opens, nothing is automated on screen) to render the finished HTML report into a PDF that
@@ -123,7 +125,7 @@ Do all of this for me:
    so that ~/.claude/skills/bookends-research-skill/SKILL.md exists.
 
 2. Install the Python dependencies the skill needs:
-   python3 -m pip install --user pymupdf pyobjc-framework-Quartz pypdf
+   python3 -m pip install --user pyobjc-framework-Quartz pypdf
    If pip isn't available, sort it out or tell me plainly what I need to do.
 
 3. Check that Google Chrome is installed (the skill uses it headlessly to render the
@@ -146,7 +148,7 @@ git clone https://github.com/richardkaplan/bookends-research-skill.git
 mkdir -p ~/.claude/skills
 cp -R bookends-research-skill ~/.claude/skills/bookends-research-skill
 
-python3 -m pip install --user pymupdf pyobjc-framework-Quartz pypdf
+python3 -m pip install --user pyobjc-framework-Quartz pypdf
 ```
 
 `~/.claude/skills/` is your personal skills library: any folder in there with a `SKILL.md`
@@ -399,9 +401,8 @@ bookends-research-skill/
 ├── .claude-plugin/plugin.json   # plugin manifest
 ├── references/bookends.md       # Bookends calls, bookends:// link forms, Vancouver style
 ├── scripts/
-│   ├── highlight_and_link.py         # find the quote, write the highlight, resolve the page
 │   ├── validate_bookends_links.py    # pre-ship gate: every bookends:// link must resolve
-│   ├── validate_bookends_attachment.py
+│   ├── validate_bookends_attachment.py  # pre-ship gate: the right PDF, first, and readable
 │   └── styled_links_to_clipboard.sh
 └── examples/screenshots/        # the images above
 ```

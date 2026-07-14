@@ -209,6 +209,77 @@ as a fatal pre-ship gate. On a mismatch: re-attach the correct PDF **first**, ne
 the stray (detach/supersede it), and **re-read every deep link for that reference** — the
 attachmentID has churned.
 
+## 3d. R-BOOKENDS-VERIFY-EVERY-01 — check the artifact, not a cousin of it
+
+Verify **every distinct link actually shipped, enumerated from the SHIPPED FILE** (the
+finished HTML; the attached PDF's `/Annots` URIs). Not a sample. Not a representative. Not a
+related-but-different object. **N distinct links in the file → N probes**, and the run's
+report-back states both numbers. "I checked one and it worked" is evidence about that one
+link and nothing else.
+
+**A passing check on the wrong object is worse than no check** — it manufactures false
+confidence and ships the bug with a certificate attached. Three real instances, one shape:
+
+- **A cousin.** A hardcoded module-level constant sent **all 88 per-source `Bookends Group`
+  links across 29 sources to the report's own `Reports` folder** instead of each source's
+  subtopic group. The pre-ship check fired the **report's own** group link — which correctly
+  points at `Reports` — watched it land on `Reports`, and reported "group links verified."
+  True, and worthless: the 29 citation links were never touched.
+- **The wrong failure mode.** "Pre-ship check passed: 0 bare-id links, 0 `/selection/` links."
+  Also true, also irrelevant — the broken links were **well-formed `/group/` links pointing at
+  the wrong group**, a form the check never looked at.
+- **The link vs the paper** (§3c, R-BOOKENDS-ATTACHMENT-PROVENANCE-01). A link that was
+  well-formed, carried a real attachmentID, resolved without error and **passed observed
+  navigation** — while opening the **wrong paper**, because of a stray first attachment.
+
+Before running any check, ask: **could this pass while the actual defect is present?** If yes,
+fix the check first. Same family as R-BOOKENDS-ATTACHMENT-PROVENANCE-01.
+
+Enforcement: `scripts/validate_bookends_links.py` enumerates from the surfaces and probes every
+distinct URL, and takes `--group-map` (refID → the subtopic group the source was filed into at
+step 5). It FAILS on the fingerprints of this bug: **every per-source group link identical**, or
+a per-source group link pointing at the **`Reports`** folder.
+
+## 3e. R-BOOKENDS-NO-APPLESCRIPT-GROUP-VERIFY-01 — AppleScript cannot verify group navigation
+
+**BANNED by name: verifying a `bookends://…/group/…` link with AppleScript.** Bookends'
+AppleScript dictionary exposes **no property for the currently-displayed group** — there is
+nothing to ask. Reading **`selected publication items`** after firing a `/group/` URL returns a
+**stale selection from before the call**: it reports success no matter what the URL did, or
+whether it did anything at all. It cannot tell "right group", "wrong group" and "nothing
+happened" apart. It is a silently-lying verification path.
+
+**Required procedure — read the window:**
+
+1. **Park** Bookends on a known state with a **known reference count** (e.g. `All`, showing N
+   refs). Never park on the group under test.
+2. **Fire** the URL.
+3. **READ THE WINDOW — screenshot it** and read back the **displayed group** and the
+   **displayed reference count**.
+4. **Correct navigation MUST change both.** The displayed group must be the one the URL named,
+   and **the ref count must change from N. The count change is the proof.** Unchanged group or
+   unchanged count = FAIL.
+5. Log the observation (parked group + count → observed group + count + screenshot path) and
+   pass it to `scripts/validate_bookends_links.py --group-nav-log`. The validator will not pass
+   a `/group/` link without it. **"Fired it, no alert appeared" is not a pass.**
+
+**PDF / citation links are a different case and AppleScript verification of them is SOUND —
+keep it.** After firing a `…/pdf/…` link, `name of displayed PDF` and `link to displayed PDF`
+report the PDF *and page* Bookends actually navigated to; after a `…/ref/…` link,
+`selected publication items` reports the reference it actually selected. Those readbacks **are
+refreshed by the action**. Group links have no such property — **do not analogise from one to
+the other.**
+
+**General rule: exit codes are never evidence.** `open` returns **0 even when Bookends throws
+an error dialog** and does nothing at all. Every verification must read back **observed state
+that could only be true if the action had succeeded** — and the reader must first prove that
+the state it reads is **refreshed by the action**, not cached/stale from before it.
+
+**The null test — run it once per verification channel before trusting it.** Park on a
+known-wrong state and **read the channel without firing anything.** If it still reports the
+expected/"success" value, the channel is stale and verifies nothing. `selected publication
+items` fails this test for group links; `link to displayed PDF` passes it for PDF links.
+
 ## 3a. Deliver the links into Bookends as STYLED, CLICKABLE text
 
 `bookends://` links work perfectly *inside* Bookends — but only when they sit in a field as

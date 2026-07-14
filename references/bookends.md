@@ -472,3 +472,47 @@ editing anything.** If what you emit already matches Copy Link, the generator is
 
 1 ✓, 2 ✓, 3 ✓ → **the links are correct and the failure is environmental.** Say so plainly. Do not
 invent a code fix to look productive.
+
+## 3i. R-BOOKENDS-LIBRARY-NAME-ON-REPORT-01 — name the target library, once, in the header
+
+Every report says which Bookends library its links resolve in. The library name is *in* every
+`bookends://` URL (`…/pdf/<Library>/…`, `…/group/<Library>/…`) but the reader only ever sees the
+anchor text, so without a statement in the report a user with several libraries cannot tell which
+one to open — and a link into a closed library fails silently (3h).
+
+**Say it once, at document scope, in three places:**
+
+- the **header / cross-navigation block** — `Bookends library: Library1`;
+- the **how-to-open callout**, paired with the closed-library warning;
+- the **provenance footer**, alongside the link counts.
+
+**Do not repeat it per citation.** Every link in a report targets the same library, so putting the
+name on 31 cards adds 31 copies of a constant and crowds the per-link labels that actually carry
+information — the group's name (3g) and the `Bookends Citation` affordance (3b). Per-link library
+naming is only warranted for a report drawing sources from **more than one library**, which this
+skill's one-library-per-run filing makes impossible.
+
+### Can a URL open a library? No — but Bookends may auto-open one.
+
+**There is no `bookends://` command to open or switch a library.** The documented URL destinations
+are: a reference, a group/folder, a PDF, a PDF page, PDF-selected text, a PDF annotation. No
+library verb. **AppleScript has no `open library` either** — the dictionary offers `create library`
+and nothing for opening an existing one.
+
+The User Guide does, however, document an automatic behaviour, verbatim:
+
+> "Clicking on a Bookends hypertext link in another app will launch Bookends, if it is not running,
+> and navigate to the link. **If the destination is in a closed library, it will be automatically
+> opened if it is listed in the File → Open → Recents menu.**"
+
+Two things follow:
+
+1. **The auto-open is conditional**, not guaranteed. The target library must be on the Recents list,
+   whose length is capped in Settings → *Number of recent libraries shown*. A library that has aged
+   off Recents will not auto-open and the link will fail silently — correct URL, no destination.
+2. **It explains the intermittency.** A `bookends://` link fired at a Bookends with no library open
+   sometimes navigates fine and sometimes does nothing. That is not a flaky URL scheme; it is
+   whether the target library happened to be in Recents.
+
+**Therefore: do not try to solve the closed-library problem at the link level.** There is no link
+form that opens a library. Name the library in the report (3i) and warn the reader (3h).

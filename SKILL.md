@@ -668,7 +668,8 @@ Assemble a single self-contained HTML document (inline `<style>`) with the SAME
 sections, in this order, applying all the format rules:
 
 ```
-Header            — title, subtitle, prepared-date, one line on the evidence base
+Header            — title, subtitle, prepared-date, one line on the evidence base, and
+                    the TARGET BOOKENDS LIBRARY name (R-BOOKENDS-LIBRARY-NAME-ON-REPORT-01)
 Executive Summary — up-front bottom-line (4–8 sentences): what the evidence shows, the
                     stance tally, and the single most important caveat. A reader can
                     stop here and know the answer.
@@ -1234,3 +1235,56 @@ Diagnose statically, in this order, before ever firing a URL:
 
 If 1 passes, 2 passes and 3 passes, **the links are correct** and the failure is environmental.
 Say so plainly. Do not invent a code fix to look productive.
+
+---
+
+## R-BOOKENDS-LIBRARY-NAME-ON-REPORT-01 — name the target library, once, prominently
+
+**Every report states which Bookends library its links target.** A `bookends://` link carries the
+library name in its path (`…/pdf/<Library>/…`, `…/group/<Library>/…`), but the reader never sees
+that — they see anchor text. A user with more than one library has no way to know which library a
+report expects, and a link into a library that is not open fails silently
+(R-BOOKENDS-LIBRARY-MUST-BE-OPEN-01). Naming the library removes both problems.
+
+**Where it goes — three places, all document-scope:**
+
+1. **The header / cross-navigation block**, next to the DEVONthink and Bookends-folder links:
+   > **Bookends library:** `Library1` — all `bookends://` links below resolve in this library and
+   > require it to be open.
+2. **The "how to open the deep links" callout**, paired with the closed-library warning:
+   > **These links target the Bookends library `Library1`.** … **If `Library1` is not open, the
+   > links will resolve against nothing and appear broken.** Bookends will auto-open a closed
+   > destination library *only* if it is listed in **File → Open → Recents**.
+3. **The provenance footer**, with the link counts.
+
+**Where it does NOT go: the individual citations.** Do **not** repeat the library name on each
+source card, in the stance table, or in the References list. The library is a property of the
+**document**, not of any one link: every link in a given report targets the same library, so
+repeating it 31 times adds 31 copies of a constant and buys nothing. It would also crowd out the
+information the per-link labels exist to carry — the group's name
+(R-BOOKENDS-GROUP-LINK-LABEL-01) and the `Bookends Citation` affordance. **State it once,
+prominently, at document scope.**
+
+*(The one case that would justify per-link library naming is a report whose sources are drawn from
+**more than one library**. This skill files every source of a run into one library, so that case
+does not arise. If a future run ever spans libraries, name the library per link — and say so in the
+header.)*
+
+### How Bookends actually handles a closed target library (verified against the User Guide)
+
+There is **no `bookends://` URL command to open or switch a library.** The documented URL
+destinations are a reference, a group/folder, a PDF, a PDF page, PDF-selected text, and a PDF
+annotation — no library-open verb. There is likewise **no AppleScript `open library` command**
+(the dictionary has `create library`, and nothing to open an existing one).
+
+What the User Guide *does* document, verbatim:
+
+> "Clicking on a Bookends hypertext link in another app will launch Bookends, if it is not running,
+> and navigate to the link. **If the destination is in a closed library, it will be automatically
+> opened if it is listed in the File → Open → Recents menu.**"
+
+So the auto-open is real but **conditional**: the target library must be in the Recents list (whose
+length is capped by Settings → *Number of recent libraries shown*). A library that has aged off
+Recents will not auto-open, and the link fails silently. That conditionality is why the report must
+name the library rather than relying on Bookends to sort it out.
+

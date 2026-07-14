@@ -231,6 +231,55 @@ def links_in_html(text):
     return [u for u in ANY.findall(text) if ELLIPSIS not in u]
 
 
+
+GROUP_ANCHOR = re.compile(
+    r'<a\b[^>]*href="(bookends://sonnysoftware\.com/group/[^"]+)"[^>]*>(.*?)</a>',
+    re.I | re.S)
+
+GENERIC_GROUP_LABELS = {
+    "bookends group", "open bookends group", "open in bookends", "bookends",
+    "group", "open group", "bookends folder", "open bookends folder",
+}
+
+
+def _text_of(html_fragment):
+    """Strip tags/entities from an anchor's inner HTML."""
+    t = re.sub(r"<[^>]+>", "", html_fragment)
+    t = (t.replace("&amp;", "&").replace("&mdash;", "\u2014")
+          .replace("&ndash;", "\u2013").replace("&middot;", "\u00b7")
+          .replace("&nbsp;", " ").replace("&#9656;", ""))
+    return " ".join(t.split()).strip(" \u00b7\u2022-")
+
+
+def check_group_link_labels(html_text, surface):
+    """R-BOOKENDS-GROUP-LINK-LABEL-01 — a group link's anchor text is the GROUP'S OWN NAME.
+
+    A page full of identical generic 'Bookends Group' labels hides exactly the defect
+    R-BOOKENDS-VERIFY-EVERY-01 exists to catch (every source's group link pointing at one
+    group), and forces the reader to click to find out where a link goes.
+    """
+    errs = []
+    for href, inner in GROUP_ANCHOR.findall(html_text):
+        label = _text_of(inner)
+        if not label:
+            continue
+        leaf = unquote(href.rsplit("/", 1)[-1])
+        low = label.lower()
+        if low in GENERIC_GROUP_LABELS:
+            errs.append(
+                "%s: group link labelled %r — R-BOOKENDS-GROUP-LINK-LABEL-01 requires the "
+                "GROUP'S OWN NAME as the anchor text (expected something like %r)."
+                % (surface, label, leaf))
+            continue
+        # the label must actually name the group: full name, or its subtopic tail
+        tail = leaf.split("\u2014")[-1].strip()
+        norm = lambda x: x.lower().replace("&", "and").replace("\u2014", "-").replace(" ", "")
+        if norm(label) not in (norm(leaf), norm(tail)) and norm(tail) not in norm(label):
+            errs.append(
+                "%s: group link labelled %r does not name its target group %r "
+                "(R-BOOKENDS-GROUP-LINK-LABEL-01)." % (surface, label, leaf))
+    return errs
+
 def placeholders_in_html(text):
     return [u for u in ANY.findall(text) if ELLIPSIS in u]
 
@@ -741,6 +790,17 @@ def main():
         print(__doc__)
         return 2
 
+    # raw HTML text per html surface, for the anchor-text rule
+    # (R-BOOKENDS-GROUP-LINK-LABEL-01)
+    html_texts = {}
+    for p_ in args.html:
+        html_texts[p_] = open(p_, encoding="utf-8", errors="replace").read()
+    if args.manifest:
+        for kind_, target_ in json.load(open(args.manifest)):
+            if kind_ == "html":
+                html_texts[target_] = open(target_, encoding="utf-8",
+                                           errors="replace").read()
+
     v = Verifier(library=args.library, decoys=args.decoy or ["264081", "100116"])
     v.load_truth_cache(args.truth_cache)
     if args.group_nav_log and os.path.exists(args.group_nav_log):
@@ -771,6 +831,8 @@ def main():
         if fp:
             errs.append(fp)
         errs.extend(check_group_targets(links, group_map))
+        if kind == "html" and target in html_texts:
+            errs.extend(check_group_link_labels(html_texts[target], target))
 
         # R-BOOKENDS-VERIFY-EVERY-01 — enumerate from the SHIPPED file and probe
         # EVERY distinct link in it. No sampling, no representative, no cousin.

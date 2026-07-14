@@ -363,11 +363,14 @@ The report MUST follow these six rules exactly.
      `bookends_get_properties`. If the reference has NO DOI, PMID, or URL, leave the
      citation as **plain text (no dead link)** — but the two Bookends links below are still
      MANDATORY.
-   - **(b) A link labeled exactly `Bookends Group`** → the **library-qualified GROUP link**
+   - **(b) The GROUP link — labelled with the group's OWN NAME**
+     (**R-BOOKENDS-GROUP-LINK-LABEL-01**, see below) → the **library-qualified GROUP link**
      `bookends://sonnysoftware.com/group/<LibraryName>/<URL-encoded group name>` for the
      **subtopic child group that actually holds that source**. Lands the reader among that
      report's sibling sources. `<LibraryName>` is REQUIRED (e.g. `Library1`); percent-encode
-     the group name (space→`%20`, em dash “—”→`%E2%80%94`, `&`→`%26`).
+     the group name (space→`%20`, em dash “—”→`%E2%80%94`, `&`→`%26`). The anchor **text** is
+     the subtopic group's name — never the generic string `Bookends Group`, `Open Bookends
+     Group`, or `Open in Bookends`.
    - **(c) A link labeled exactly `Bookends Citation`** → a link that opens **THAT SPECIFIC
      reference / its PDF**, never the whole library. It MUST be the Bookends-generated PDF
      deep link `bookends://sonnysoftware.com/pdf/<Library>/<refID>/<attachmentID>/<page0>`,
@@ -381,16 +384,41 @@ The report MUST follow these six rules exactly.
 
    ```html
    <strong><a href="https://doi.org/10.xxxx/yyy">Source title</a></strong>
-   <span class="be-links"> · <a class="be-group" href="bookends://sonnysoftware.com/group/Library1/Topic%20%E2%80%94%20Subtopic">Bookends Group</a>
+   <span class="be-links"> · <a class="be-group" href="bookends://sonnysoftware.com/group/Library1/Topic%20%E2%80%94%20Subtopic">Topic — Subtopic</a>
    · <a class="be-cite" href="bookends://sonnysoftware.com/pdf/Library1/8721/1783717403/2">Bookends Citation</a></span>
    ```
 
-   So: **citation → the article's web page; "Bookends Group" → the subtopic group;
+   So: **citation → the article's web page; the group-named link → the subtopic group;
    "Bookends Citation" → that reference/PDF itself.** The two Bookends links must be
    distinguishable **at a glance** — never collapsed into one ambiguous "Open in Bookends".
+   The group link is identifiable *by its own name*: the reader can see where it goes
+   without clicking it (R-BOOKENDS-GROUP-LINK-LABEL-01).
    Style all links per rule 3. **The bare reference-id form
    `bookends://sonnysoftware.com/<id>` remains BANNED for every link** (see the standing
    rule and the pre-ship check).
+
+   ### R-BOOKENDS-GROUP-LINK-LABEL-01 (hard rule — label the group link with the group's name)
+
+   **A group link's anchor text is the GROUP'S OWN NAME.** Never a generic string.
+
+   - ✅ `Rib Fractures & Chest Wall` · ✅ `Topic — Rib Fractures and Chest Wall`
+   - ⛔ `Bookends Group` · ⛔ `Open Bookends Group` · ⛔ `Open in Bookends` · ⛔ `Group`
+
+   Either the **full project-qualified group name** (`Topic — Subtopic`) or the **subtopic
+   portion alone** (`Subtopic`) is acceptable — pick one and use it consistently through the
+   report. The point of the rule is that **a reader can see where the link goes without
+   clicking it**, and can tell two different group links apart on sight. A page full of
+   identical `Bookends Group` labels hides exactly the bug R-BOOKENDS-VERIFY-EVERY-01 exists
+   to catch: every source's group link silently pointing at the same group.
+
+   **Applies on every surface** — the per-source cards, the section headers, the Summary /
+   Source-type table, and the References (Vancouver) list. It changes the group link's
+   **TEXT only**: the dual-link standard is untouched, so every source still carries BOTH its
+   web citation link AND its `Bookends Citation` link alongside the group-named link.
+
+   The `Bookends Citation` link keeps its literal label — it points at one specific reference,
+   for which there is no short human-meaningful name, and the contrast between a *named* group
+   link and a *labelled* citation link is what makes the pair readable at a glance.
 
 ---
 
@@ -1160,3 +1188,49 @@ public-literature run ("Is Surgery Effective for Low Back Pain?") with no PHI.
    back observed state that could only be true if the action succeeded, and must first prove that
    state is refreshed by the action rather than cached from before it (the null test:
    read the channel *without* firing — if it still says "success", the channel verifies nothing).
+
+---
+
+## R-BOOKENDS-LIBRARY-MUST-BE-OPEN-01 — a correct group link fails silently with no library open
+
+**Before you diagnose a `bookends://` link as broken, CHECK WHETHER A LIBRARY IS OPEN.**
+
+Every `bookends://` link — quote deep links and group links alike — resolves against Bookends'
+**front library window**. If Bookends is running with **no library open**, macOS hands the URL
+over successfully and Bookends has nothing to resolve it against. The link looks dead. It is
+not. Two separate incidents on 2026-07-14 — one presenting as the *"An error has occurred: nil
+object"* dialog, one as a group link that simply did nothing — were **both a closed library**,
+not a bad link.
+
+Check it first, background-only, before touching a single character of the generator:
+
+```
+mcp__bookends-mcp__bookends_libraries { action: "list" }
+→ {"count": 0, "libraries": []}     ← NO LIBRARY OPEN. This is your bug. Stop here.
+→ {"count": 1, "libraries": [{"name": "Library1.bdb", "frontmost": true}], ...}
+```
+
+**The name-based group form is CORRECT.**
+`bookends://sonnysoftware.com/group/<LibraryName>/<percent-encoded group name>` is byte-for-byte
+what Bookends' own **Edit → Copy Link** emits when you select a group in the sidebar. Verified
+against Bookends itself, 2026-07-14. Do not "improve" it. There is no full-path form, no
+`.bdb`-suffixed form, and no id-based form to switch to.
+
+**The corollary, and it is the expensive one:** an agent that "fixes" a correct link because it
+assumed the link was at fault makes the situation strictly worse — it burns a regeneration cycle,
+supersedes good records, and leaves the real (environmental) cause in place to recur. **Confirm
+the form against Bookends' own Copy Link output before editing anything.** If the emitted form
+already matches Copy Link, the generator is not the bug: look at the environment.
+
+Diagnose statically, in this order, before ever firing a URL:
+
+1. **Is a library open?** (`bookends_libraries { action: "list" }`) — the single most common cause.
+2. **Are the per-source group links distinct?** Extract every `/group/` link from the SHIPPED
+   file. If they are all identical, or all end in `Reports`, that is the hardcoded-constant bug
+   (R-BOOKENDS-VERIFY-EVERY-01) — a real generator defect.
+3. **Do the decoded group names match the live Bookends group names, character for character?**
+   Read the names back (`bookends_groups { action: "get" }`) and compare codepoints — an em dash
+   must be U+2014 on both sides and must be percent-encoded as `%E2%80%94` in the URL.
+
+If 1 passes, 2 passes and 3 passes, **the links are correct** and the failure is environmental.
+Say so plainly. Do not invent a code fix to look productive.

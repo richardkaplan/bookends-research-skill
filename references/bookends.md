@@ -311,7 +311,7 @@ field and send a plain-paste keystroke via System Events; otherwise leave the st
 the clipboard and tell the user to press ⌘V into the Notes field. Either way this is **in
 addition to** the attached HTML report and the iCloud copy — those stay unchanged.
 
-## 3b. Three links per reference — web citation + Bookends Group + Bookends Citation
+## 3b. Three links per reference — web citation + the named Group link + Bookends Citation
 ## (R-BOOKENDS-DUAL-LINK-01)
 
 Every reference in the report (Summary/Source-type table, per-article cards, AND the
@@ -326,7 +326,9 @@ distinct affordances**:
 
   Pull `doi`, `pmid`, and `url` from the record (e.g. `bookends_get_properties`). If none of
   the three exist, leave the citation as **plain text** (no dead link) and say so.
-- **"· Bookends Group" → the source's subtopic group.** The library-qualified group link
+- **"· <group name>" → the source's subtopic group.** Labelled with the GROUP'S OWN NAME, never
+  the generic string "Bookends Group" (**R-BOOKENDS-GROUP-LINK-LABEL-01**) — the reader must be
+  able to see where the link goes without clicking it. The library-qualified group link
   `bookends://sonnysoftware.com/group/<LibraryName>/<URL-encoded group name>` (§3). Lands the
   reader among that report's sibling sources.
 - **"· Bookends Citation" → that specific reference / its PDF.** The Bookends-generated PDF
@@ -335,14 +337,14 @@ distinct affordances**:
   `…/selection/…` form is BANNED (R-BOOKENDS-PDF-DEEPLINK-02) — it throws "nil object".
 
 Render all three so they are visually distinct (rule 6). Label the two Bookends links
-**exactly** `Bookends Group` and `Bookends Citation` — never one ambiguous "Open in
+with the **group's own name** and **exactly** `Bookends Citation` — never one ambiguous "Open in
 Bookends". Deliver as styled clickable text (§3a). This applies identically in the
 Summary table, the Part I cards, and the References list; the Academic Summary stays
 plain-text / Word-ready. Example rendering:
 
 ```html
 <strong><a href="https://doi.org/10.1007/xxxxx">Source title</a></strong>
- · <a href="bookends://sonnysoftware.com/group/Library1/Topic%20%E2%80%94%20Subtopic">Bookends Group</a>
+ · <a href="bookends://sonnysoftware.com/group/Library1/Topic%20%E2%80%94%20Subtopic">Topic — Subtopic</a>
  · <a href="bookends://sonnysoftware.com/pdf/Library1/8721/1783717403/3">Bookends Citation</a>
 ```
 
@@ -399,3 +401,74 @@ The report ends with a section titled **`References`** (NOT "Works Cited"), form
   `<RESEARCH_DIR>/<Topic> — Deep-Linked Report/<Topic> — Deep-Linked Report (AI) <date>.html`
   (create the folder if needed). If iCloud Drive is not present, fall back to a
   documented default (`$HOME/Research`) or ask the user, and report the path used.
+
+---
+
+## 3g. R-BOOKENDS-GROUP-LINK-LABEL-01 — the group link is labelled with the group's name
+
+The anchor text of a `…/group/…` link is **the group's own name**, on every surface: the
+per-source cards, the section headers, the Summary / Source-type table, and the References list.
+
+| | |
+|---|---|
+| ✅ | `<a href="bookends://sonnysoftware.com/group/Library1/Topic%20%E2%80%94%20Subtopic">Topic — Subtopic</a>` |
+| ✅ | `<a href="bookends://sonnysoftware.com/group/Library1/Topic%20%E2%80%94%20Subtopic">Subtopic</a>` |
+| ⛔ | `<a href="…">Bookends Group</a>` / `Open Bookends Group` / `Open in Bookends` / `Group` |
+
+Either the full project-qualified name or the bare subtopic name is fine — be consistent within a
+report. Two reasons this is a rule and not a preference:
+
+1. **Legibility.** The reader sees the destination without clicking.
+2. **It surfaces the hardcoded-constant bug.** When every group link renders as the same generic
+   `Bookends Group` string, a generator that points all of them at one group (see 3e) looks
+   identical to a correct one. Named labels make that defect visible on the page.
+
+This changes the group link's **text only**. The dual-link standard (R-BOOKENDS-DUAL-LINK-01) is
+untouched: every source still carries its web citation link AND its `Bookends Citation` link
+alongside the group-named link. `Bookends Citation` keeps its literal label — it targets one
+specific reference, which has no short human-meaningful name.
+
+## 3h. R-BOOKENDS-LIBRARY-MUST-BE-OPEN-01 — the closed-library false alarm
+
+**A `bookends://` link resolves against Bookends' FRONT LIBRARY WINDOW.** With Bookends running
+but **no library open**, macOS hands the URL over successfully and Bookends resolves it against
+nothing. The link appears dead. It is not.
+
+On 2026-07-14 this cost real time twice in one day: once presenting as the *"An error has
+occurred: nil object"* dialog, once as a group link that silently did nothing. **Both were a
+closed library.** Neither was a bad link.
+
+**Check it first — background-only, one call, before touching the generator:**
+
+```
+mcp__bookends-mcp__bookends_libraries { action: "list" }
+→ {"count": 0, "libraries": []}   ← NO LIBRARY OPEN. That is the bug.
+```
+
+**The name-based group form is CORRECT — verified against Bookends itself.** Selecting a group in
+the sidebar and using **Edit → Copy Link** emits exactly:
+
+```
+bookends://sonnysoftware.com/group/<LibraryName>/<percent-encoded group name>
+```
+
+byte-for-byte the form this skill generates. There is no full-path variant, no `.bdb`-suffixed
+variant, and no id-based variant to switch to. (There is also **no AppleScript group-link
+property** — the dictionary exposes `link to displayed PDF`, but nothing for groups. Copy Link is
+the only authority.)
+
+**Corollary — the expensive one.** An agent that "fixes" a correct link because it assumed the
+link was at fault makes things strictly worse: it burns a regeneration cycle, supersedes good
+records, and leaves the real cause in place to recur. **Confirm the form against Copy Link before
+editing anything.** If what you emit already matches Copy Link, the generator is not the bug.
+
+**Static triage order, before firing any URL:**
+
+1. Is a library open? (`bookends_libraries { action: "list" }`)
+2. Are the per-source group links **distinct**? Extract every `/group/` link from the SHIPPED
+   file. All identical, or all ending in `Reports` → the hardcoded-constant bug (3e). A real defect.
+3. Do the decoded group names match the **live** Bookends group names, character for character?
+   (`bookends_groups { action: "get" }`; em dash must be U+2014 on both sides, `%E2%80%94` in the URL.)
+
+1 ✓, 2 ✓, 3 ✓ → **the links are correct and the failure is environmental.** Say so plainly. Do not
+invent a code fix to look productive.

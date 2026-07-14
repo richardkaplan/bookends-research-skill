@@ -60,8 +60,28 @@ NAVIGATION:
      (no /pdf/ link can exist for it). OBSERVED NAVIGATION: fire it, then read
      back which reference Bookends now has SELECTED.
 
-  4. /group/… — left as-is (already correct), but still fired, and a new
-     Bookends alert window appearing counts as a failure.
+  4. /group/<Lib>/<name> — CANNOT be verified from here.
+     R-BOOKENDS-NO-APPLESCRIPT-GROUP-VERIFY-01: Bookends' AppleScript
+     dictionary exposes NO property for the currently-displayed group, and
+     `selected publication items` read after firing a /group/ URL returns a
+     STALE selection from before the call — it reports success no matter what
+     the URL did, or whether it did anything at all. Firing a group link and
+     seeing no alert is NOT a pass; it is the absence of a check.
+     Group links are therefore verified by READING THE WINDOW: park Bookends on
+     a known group with a known reference count, fire the URL, SCREENSHOT the
+     window, and require BOTH the displayed group AND the reference count to
+     change to the expected group. The count change is the proof. Hand that
+     observation in with --group-nav-log; without it every /group/ link FAILS.
+
+  4b. R-BOOKENDS-VERIFY-EVERY-01 — every DISTINCT link in the SHIPPED FILE is
+     fired. No sampling, no representative link, no cousin. `probes` must equal
+     `distinct links`, and both numbers are printed. A check that passes against
+     a different object than the one that shipped (the report's own header group
+     link standing in for 29 citation links; a scan for /selection/ links when
+     the broken form was /group/) is a FALSE PASS — worse than no check, because
+     it manufactures confidence. --group-map maps each source refID to the
+     subtopic group it was filed into; the per-source group links must land on
+     THOSE groups, one for one.
 
   5. A nil-object modal appearing at ANY point during the run is fatal. The
      alert is detected via CoreGraphics window enumeration (no Accessibility
@@ -96,12 +116,13 @@ import subprocess
 import sys
 import tempfile
 import time
+from urllib.parse import unquote
 
 SELECTION = re.compile(r"bookends://sonnysoftware\.com/selection/([^/]+)/(\d+)[^\"'<>\s)]*")
 BARE = re.compile(r"bookends://sonnysoftware\.com/(\d+)")
 PDFL = re.compile(r"bookends://sonnysoftware\.com/pdf/([^/]+)/(\d+)/(\d+)/(\d+)")
 REFL = re.compile(r"bookends://sonnysoftware\.com/ref/([^/]+)/(\d+)")
-GROUP = re.compile(r"bookends://sonnysoftware\.com/group/[^\"'<>\s)]+")
+GROUP = re.compile(r"bookends://sonnysoftware\.com/group/([^/]+)/([^\"'<>\s)]+)")
 ANY = re.compile(r"bookends://sonnysoftware\.com/[^\"'<>\s)]+")
 
 
@@ -279,6 +300,9 @@ class Verifier:
         self.settle = settle
         self.truth = {}     # refID -> (bookends link, pdf path)
         self.results = {}   # url -> (ok, detail)
+        # url -> observed-window evidence for /group/ links. Empty = no group link
+        # can pass (R-BOOKENDS-NO-APPLESCRIPT-GROUP-VERIFY-01).
+        self.group_evidence = {}
         self.baseline = alert_windows()
         if self.baseline is None:
             raise RuntimeError(
@@ -415,13 +439,47 @@ class Verifier:
                                % (sel, rid))
             return True, "observed: Bookends selected ref %s" % rid
 
-        if GROUP.match(url):
-            osa(FIRE % url, timeout=60)
-            time.sleep(self.settle)
-            alert = self.new_alert()
-            if alert:
-                return False, "Bookends raised an alert window: %s" % (alert,)
-            return True, "observed: fired, no alert raised"
+        gm = GROUP.match(url)
+        if gm:
+            # R-BOOKENDS-NO-APPLESCRIPT-GROUP-VERIFY-01.
+            # There is NOTHING to ask AppleScript here: Bookends exposes no
+            # displayed-group property, and `selected publication items` read after
+            # a /group/ URL is the STALE pre-call selection — it says "success"
+            # unconditionally. Firing the link and seeing no alert is not evidence
+            # either: `open` exits 0 even when Bookends throws a dialog and does
+            # nothing. The ONLY accepted proof is the window itself.
+            want = unquote(gm.group(2))
+            ev = self.group_evidence.get(url)
+            if not ev:
+                return False, (
+                    "GROUP LINK UNVERIFIED (R-BOOKENDS-NO-APPLESCRIPT-GROUP-VERIFY-01): "
+                    "AppleScript cannot observe which group Bookends is displaying, so this "
+                    "link CANNOT be passed from here. Park Bookends on a known group with a "
+                    "known reference count, fire the URL, SCREENSHOT the window, and require "
+                    "the displayed group AND the ref count to change to %r (the count change "
+                    "is the proof). Record it in --group-nav-log. Never pass a group link "
+                    "because firing it raised no alert." % want)
+            got = (ev.get("observed_group") or "").strip()
+            parked = (ev.get("parked_group") or "").strip()
+            pc, oc = ev.get("parked_ref_count"), ev.get("observed_ref_count")
+            shot = ev.get("screenshot") or ""
+            if got != want:
+                return False, ("window shows group %r after firing, expected %r" % (got, want))
+            if not parked or parked == want:
+                return False, ("evidence parked Bookends on %r — the group under test (or "
+                               "nothing). Park elsewhere, or 'the right group is showing' was "
+                               "already true before the URL was fired" % parked)
+            if not isinstance(pc, int) or not isinstance(oc, int):
+                return False, ("evidence carries no before/after reference count — the count "
+                               "change IS the proof of navigation")
+            if pc == oc:
+                return False, ("reference count did not change (%d -> %d): the window did not "
+                               "navigate, or it navigated somewhere invisible to this check" % (pc, oc))
+            if not shot or not os.path.exists(shot):
+                return False, ("no screenshot on file (%r) — group navigation is verified by "
+                               "READING THE WINDOW, and the read must be kept" % shot)
+            return True, ("observed in the window: %s (%d refs) -> %s (%d refs) [%s]"
+                          % (parked, pc, got, oc, os.path.basename(shot)))
 
         return False, "unrecognised bookends:// route — refusing to pass it"
 
@@ -555,6 +613,76 @@ def check_resolution(path):
                                              ", ".join(refs[:8])))
 
 
+def load_group_map(path):
+    """refID -> the subtopic group name the source was filed into (step 5).
+
+    Without it, the per-source group links cannot be checked against anything, and
+    the exact bug R-BOOKENDS-VERIFY-EVERY-01 exists to catch — a hardcoded group
+    segment sending EVERY source's group link to the same (wrong) group — is
+    invisible to a validator that only asks "does this URL resolve".
+    """
+    if not path or not os.path.exists(path):
+        return None
+    return {str(k): v for k, v in json.load(open(path, encoding="utf-8")).items()}
+
+
+def check_group_targets(links, group_map):
+    """FATAL structural checks on the group links actually present in the SHIPPED file.
+
+    R-BOOKENDS-VERIFY-EVERY-01. Enumerated from the artifact, never from intent.
+
+      * the hardcoded-constant fingerprint: EVERY per-source group link identical,
+        while the report cites sources filed into more than one subtopic group;
+      * any per-source group link pointing at the report's own `… — Reports` folder
+        (the Reports link belongs to the header cross-nav, not to a source);
+      * a group link naming a group no source was ever filed into.
+
+    This is the check the false "group links verified" pass did not perform: it fired
+    the report's OWN header link (which legitimately targets Reports), and never looked
+    at the 88 per-source links sitting in the same file.
+    """
+    errs = []
+    gms = [m for m in (GROUP.match(l) for l in links) if m]
+    if not gms:
+        return errs
+    names = [unquote(m.group(2)) for m in gms]
+    distinct = sorted(set(names))
+    reports_links = [n for n in names if n.strip().lower().endswith("reports")]
+    # The header cross-nav contributes exactly ONE Reports link. More than one means
+    # per-source group links were pointed at the Reports folder.
+    if len(reports_links) > 1:
+        errs.append(
+            "%d group link(s) point at the report's own '%s' folder. Only the ONE header "
+            "cross-nav link may target Reports; a per-source 'Bookends Group' link must "
+            "target the SOURCE's subtopic group (R-BOOKENDS-VERIFY-EVERY-01: the hardcoded "
+            "group-segment fingerprint)." % (len(reports_links), reports_links[0]))
+    if group_map is None:
+        errs.append(
+            "no --group-map supplied: the per-source group links cannot be checked against "
+            "the group each source was actually filed into, so an all-links-point-at-one-group "
+            "bug would pass unseen (R-BOOKENDS-VERIFY-EVERY-01). Write the refID -> subtopic "
+            "group map at step 5 and pass it in.")
+        return errs
+    filed = sorted(set(group_map.values()))
+    unknown = [n for n in distinct
+               if n not in filed and not n.strip().lower().endswith("reports")]
+    if unknown:
+        errs.append("group link(s) name group(s) no source was filed into: %s (filed groups: %s)"
+                    % (", ".join(unknown[:5]), ", ".join(filed[:8])))
+    per_source = [n for n in distinct if not n.strip().lower().endswith("reports")]
+    if len(filed) > 1 and len(per_source) <= 1:
+        errs.append(
+            "sources are filed across %d subtopic groups (%s) but the shipped file carries "
+            "only %d distinct per-source group link(s) — the fingerprint of a hardcoded group "
+            "segment (R-BOOKENDS-VERIFY-EVERY-01)."
+            % (len(filed), ", ".join(filed[:6]), len(per_source)))
+    missing = [g for g in filed if g not in distinct]
+    if missing:
+        errs.append("no group link in the shipped file targets these groups that sources were "
+                    "filed into: %s" % ", ".join(missing[:6]))
+    return errs
+
+
 def gather(args):
     surfaces = []
     for p in args.html:
@@ -593,6 +721,17 @@ def main():
                     help="pagemap JSON from the annotate-and-link step; any link with "
                          "new_page=null (unresolved quote page) is a hard FAIL")
     ap.add_argument("--json")
+    ap.add_argument("--group-map",
+                    help="refID -> subtopic group name (written at step 5). REQUIRED whenever "
+                         "the report carries per-source 'Bookends Group' links: without it a "
+                         "hardcoded group segment pointing every source at one group cannot be "
+                         "seen (R-BOOKENDS-VERIFY-EVERY-01)")
+    ap.add_argument("--group-nav-log",
+                    help="observed-window evidence for /group/ links: "
+                         "{url: {parked_group, parked_ref_count, observed_group, "
+                         "observed_ref_count, screenshot}}. REQUIRED — AppleScript cannot "
+                         "observe Bookends' displayed group, so without this every group link "
+                         "FAILS (R-BOOKENDS-NO-APPLESCRIPT-GROUP-VERIFY-01)")
     ap.add_argument("--truth-cache",
                     help="refID -> [bookends link, pdf path] JSON; saves re-asking Bookends for links it already gave us")
     args = ap.parse_args()
@@ -604,6 +743,9 @@ def main():
 
     v = Verifier(library=args.library, decoys=args.decoy or ["264081", "100116"])
     v.load_truth_cache(args.truth_cache)
+    if args.group_nav_log and os.path.exists(args.group_nav_log):
+        v.group_evidence = json.load(open(args.group_nav_log, encoding="utf-8"))
+    group_map = load_group_map(args.group_map)
 
     out = {"surfaces": [], "verified_urls": {}, "fatal": []}
     quote_lookup = quotes_by_ref(args.resolution_report)
@@ -628,9 +770,13 @@ def main():
         fp = check_all_page_zero(links, lambda r: v.bookends_truth(r)[1], quote_lookup)
         if fp:
             errs.append(fp)
+        errs.extend(check_group_targets(links, group_map))
 
+        # R-BOOKENDS-VERIFY-EVERY-01 — enumerate from the SHIPPED file and probe
+        # EVERY distinct link in it. No sampling, no representative, no cousin.
+        distinct = sorted(set(links))
         checked = 0
-        for url in links:
+        for url in distinct:
             if SELECTION.match(url) or (BARE.match(url) and not
                                         (PDFL.match(url) or REFL.match(url)
                                          or GROUP.match(url))):
@@ -640,15 +786,26 @@ def main():
             if not ok:
                 errs.append("%s -> %s" % (url, detail))
 
+        # The probe count MUST equal the distinct-link count: every distinct link that
+        # shipped was fired. A shortfall means something was skipped, and a verdict over
+        # a subset is not a verdict (R-BOOKENDS-VERIFY-EVERY-01).
+        expected_probes = len([u for u in distinct
+                               if not (SELECTION.match(u) or
+                                       (BARE.match(u) and not (PDFL.match(u) or REFL.match(u)
+                                                               or GROUP.match(u))))])
+        if checked != expected_probes:
+            errs.append("probed %d of %d distinct links — a verdict over a subset is not a "
+                        "verdict (R-BOOKENDS-VERIFY-EVERY-01)" % (checked, expected_probes))
         total_links += len(links)
         total_bad += len(errs)
         rec = {"surface": kind, "target": target, "links": len(links),
+               "distinct_links": len(distinct), "probes": checked,
                "links_observed": checked, "banned_selection": len(banned_sel),
                "banned_bare": len(banned_bare), "errors": errs,
                "verdict": "PASS" if not errs else "FAIL"}
         out["surfaces"].append(rec)
-        print("%-4s %-11s links=%-4d observed=%-4d  %s"
-              % (rec["verdict"], kind, rec["links"], checked,
+        print("%-4s %-11s links=%-4d distinct=%-4d probed=%-4d  %s"
+              % (rec["verdict"], kind, rec["links"], len(distinct), checked,
                  os.path.basename(str(target))), flush=True)
         for e in errs[:5]:
             print("       ! %s" % e, flush=True)
@@ -675,7 +832,8 @@ def main():
         print("\nFAIL — do not ship. %d surface(s) carry links that could not be "
               "observed to resolve." % len(failed), file=sys.stderr)
         return 1
-    print("\nPASS — every link on every surface was observed to resolve in Bookends.")
+    print("\nPASS — every DISTINCT link on every surface was fired and observed to resolve "
+          "in Bookends (group links via the window, not AppleScript).")
     return 0
 
 

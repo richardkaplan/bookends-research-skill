@@ -346,6 +346,30 @@ plain-text / Word-ready. Example rendering:
  · <a href="bookends://sonnysoftware.com/pdf/Library1/8721/1783717403/3">Bookends Citation</a>
 ```
 
+## 3f. R-BOOKENDS-NARRATIVE-CITE-STYLE-01 — in-narrative citation style
+
+The Part II narrative's in-text citations have a **named style**; `author-date` is the
+**default**.
+
+- **`author-date` (APA-like, DEFAULT)** — `(Jones et al, 2015)` (3+ authors),
+  `(Jones & Smith, 2015)` (two), `(Jones, 2015)` (one); several works in one parenthesis are
+  **semicolon-separated**; a narrative mention reads *"Jones et al (2015) found…"*.
+- **`numeric-superscript` (AMA)** — numbered superscripts keyed to the reference list. Only on
+  explicit request.
+
+**Naming, so nobody re-litigates it:** AMA *is* the numbered/superscript system;
+`(Jones et al, 2015)` is **author-date (APA-like)**, not AMA. If a user asks for "AMA inline
+author-date", build **author-date** and label it that way.
+
+**Both styles keep the deep links.** Each in-text citation is itself an `<a>` whose href is the
+annotation-anchored `bookends://…/pdf/…` link for that source (§3). Style is presentation; the
+deep link is the point of the report. Dead author-date text = failed run.
+
+**The References list does not move.** Numbered, in citation order, **not alphabetized and not
+renumbered**, each entry keeping its web citation link plus both Bookends links (Group =
+the source's own subtopic group; Citation = its PDF deep link). The style option touches the
+**narrative only**. The Academic Summary keeps its plain-text `(Author, Year)` citations.
+
 ## 4. Vancouver References (the one format change)
 
 The report ends with a section titled **`References`** (NOT "Works Cited"), formatted in

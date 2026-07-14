@@ -92,6 +92,33 @@ The finished report's iCloud HTML copy is always written **inside a `Bookends Re
 subfolder** of `RESEARCH_DIR` (created if missing):
 `<RESEARCH_DIR>/Bookends Research/<Topic> — Deep-Linked Report/<Topic> — Deep-Linked Report (AI) <date>.html`.
 
+### Web publishing (R-BOOKENDS-PUBLISH-WEB-01)
+
+Reports written to `RESEARCH_DIR` are **also published to a static web share** so they are
+reachable as live `https://` URLs from a phone or a remote client, where a local filesystem
+path is useless. This reuses the same deployment substrate as the `dt-to-html` skill: a
+**mounted, access-controlled web share** whose root is served over HTTPS.
+
+The share is **site-specific infrastructure and is NEVER hardcoded here.** Settings are read
+from the environment, or from the untracked local config file
+`~/.config/bookends-research/web-publish.env` (KEY=VALUE lines):
+
+| Key | Meaning | Example |
+|---|---|---|
+| `WEB_SHARE_MOUNT` | mount point of the web share | `/Volumes/web` |
+| `WEB_BASE_URL` | what that mount is served as | `https://<host>` |
+| `WEB_PUBLISH_SUBDIR` | subdir of the share to publish under (default `Research`) | `Research` |
+
+Published URL structure — the iCloud tree is **mirrored**, with each path component made
+web-safe (em-dashes/spaces → `-`, `&` → `and`):
+
+```
+<WEB_BASE_URL>/<WEB_PUBLISH_SUBDIR>/<iCloud path relative to RESEARCH_DIR, web-safe>
+```
+
+If `WEB_SHARE_MOUNT` / `WEB_BASE_URL` are unset, or the share is not mounted, **no URL is
+produced — say so explicitly in the completion report. Never silently skip.**
+
 ---
 
 ## Home is Bookends (always)
@@ -903,6 +930,44 @@ citation is correct (per *Standing rules*).
   researched results are saved as a formatted HTML file in iCloud. If iCloud Drive is not
   found at the default location, fall back per *Configuration* and report the path actually
   used.
+- **Publish to the web share — R-BOOKENDS-PUBLISH-WEB-01 (do every run that writes an
+  iCloud copy; added 2026-07-14).** A filesystem path is unusable to a reader on a phone or a
+  remote client. **Every report this skill writes into `RESEARCH_DIR` MUST ALSO be published
+  to the configured web share, and the resulting live `https://` URL MUST be reported back to
+  the user** (see *Configuration → Web publishing* for the settings and URL structure). Run:
+
+  ```
+  scripts/publish_to_web_share.py "<path to the report just written under RESEARCH_DIR>"
+  # or, to (re)publish a whole collection folder and regenerate its index.html:
+  scripts/publish_to_web_share.py --all "<RESEARCH_DIR>/<collection folder>"
+  ```
+
+  The script prints a JSON manifest containing the `url` for each report. Its guarantees:
+
+  - **The report is copied BYTE-FOR-BYTE. Content is NEVER rewritten.** In particular
+    `bookends://` and `x-devonthink-item://` deep links are left exactly as generated.
+  - **PHI guard.** Only files that live under `RESEARCH_DIR` can be published. A PHI case
+    report — which per the PHI policy above is deliberately written to DEVONthink/Bookends and
+    **not** to iCloud — is therefore structurally unpublishable by this script. **The iCloud
+    write is the consent gate: no iCloud copy ⇒ no web copy.**
+  - Copy integrity is verified by SHA-256 (source vs. deployed) before a URL is returned.
+
+  **Honesty requirement — state what will and won't work remotely.** The published report
+  renders fully in any browser: prose, structure, headings, quotes, stance tables, the
+  narrative synthesis, the Academic Summary, the Vancouver references, and all `http(s)`/DOI
+  links. But **`bookends://` and `x-devonthink-item://` links are macOS app schemes: they
+  resolve only on the Mac that has Bookends / DEVONthink, and will do nothing on a phone or
+  remote browser.** Do not pretend otherwise, and do not "fix" them by rewriting the report.
+  (`dt-to-html` solves the equivalent problem for `x-devonthink-item://` by exporting the
+  source PDFs alongside the report and rewriting citations to relative `…pdf#page=N` links.
+  The same is feasible in principle for `bookends://` — the Bookends attachment PDFs would be
+  exported to the share and each `bookends://` citation rewritten to a relative PDF page link
+  — but that produces a *derived* report, not the original, and copies the source PDFs onto
+  the share. **Do not do it unless the user explicitly asks.**)
+  - **Verify, don't assume.** After publishing, fetch at least the index and one report URL
+    and confirm HTTP 200 with real report HTML (not a 404 or a directory listing). An
+    unfetched URL is not a delivered URL.
+
 - **Styled clickable links into Bookends (do every run).** So the deep links are clickable
   *inside* Bookends — not only from a browser — also deliver the report's link list into
   the report record as **styled text with live `bookends://` hyperlinks**. Build an HTML
@@ -919,7 +984,11 @@ citation is correct (per *Standing rules*).
 
 ### 8. Report back
 
-Give the user the report's name, its native `bookends://` link, the iCloud path, the
+Give the user the report's name, its native `bookends://` link, the iCloud path, **the live
+`https://` web-share URL (R-BOOKENDS-PUBLISH-WEB-01) — or an explicit statement that no URL
+was produced and why — together with the note that the report's `bookends://` /
+`x-devonthink-item://` deep links work only on the Mac, while everything else in the report
+works remotely**, the
 stance tally, the retrieval-source tally (Bookends vs Firecrawl-fallback per article), and the total number of quotes highlighted and deep-linked (per-article
 cards + narrative). Confirm the Bookends group + subtopic tree was created and verified,
 and that the styled, clickable `bookends://` link list was delivered into the report's

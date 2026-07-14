@@ -394,6 +394,59 @@ The report MUST follow these six rules exactly.
 
 ---
 
+## R-BOOKENDS-NARRATIVE-CITE-STYLE-01 — in-narrative citation style (a named, stated option)
+
+The **in-text citations inside the Part II Scholarly Synthesis** have a **named style**. Two
+are defined; **`author-date` is the DEFAULT.** State which one a run used.
+
+**Terminology — get this right, it is routinely conflated.** People often ask for "AMA style"
+while describing `(Jones et al, 2015)`. Those are **two different systems**:
+
+- **AMA** = **numbered / superscript** citations keyed to a numbered reference list
+  (`…a compartment syndrome.¹²`). Nothing parenthetical, no author, no year in the body.
+- **author-date** = the **APA-like** parenthetical form `(Jones et al, 2015)`.
+
+`(Jones et al, 2015)` is **author-date (APA-like)**, **not AMA**. When a user asks for "AMA
+with inline author-date citations", implement **author-date** and label it `author-date` in
+the run's report-back. Do not argue the naming — just do not mislabel it in the skill.
+
+### Style `author-date` (DEFAULT — APA-like parenthetical)
+
+- **Three or more authors:** `(Jones et al, 2015)`
+- **Two authors:** `(Jones & Smith, 2015)`
+- **One author:** `(Jones, 2015)`
+- **Multiple works in one parenthesis:** separated by **semicolons** —
+  `(Jones et al, 2015; Smith & Patel, 2019; Okafor, 2021)`
+- **Narrative mention** (author as the sentence's subject) reads naturally, with only the year
+  parenthesised: *"Jones et al (2015) found …"*, *"Jones & Smith (2015) reported …"*
+- No comma before the ampersand; no period after "et al" (`et al, 2015`, as written here).
+
+### Style `numeric-superscript` (AMA — the prior behavior, still available on request)
+
+Numbered superscripts in citation order, keyed to the References list. Use only when the user
+explicitly asks for numbered/superscript/AMA citations.
+
+### Invariants that hold under BOTH styles (non-negotiable)
+
+- **Every in-text citation stays a LIVE HYPERLINK to its highlighted passage** — the
+  annotation-anchored `bookends://…/pdf/<Library>/<refID>/<attachmentID>/<page0>` deep link
+  (R-BOOKENDS-PDF-DEEPLINK-02). **Changing the citation style must not cost the deep link.**
+  The `(Jones et al, 2015)` text itself is the anchor. A narrative whose author-date citations
+  are dead text is a FAILED run, however correct the style looks.
+- **The end-of-report References list DOES NOT CHANGE with the style.** It stays exactly as
+  the skill already builds it: **numbered, in citation order — NOT alphabetized, NOT reordered,
+  NOT renumbered** — each entry carrying its **web citation link** plus **BOTH** Bookends links
+  (`· Bookends Group · Bookends Citation`, R-BOOKENDS-DUAL-LINK-01), with the Group link
+  pointing at **that source's own subtopic group**, never the Reports folder
+  (R-BOOKENDS-VERIFY-EVERY-01). **The style option governs the in-narrative citations ONLY.**
+- **The Academic Summary is unaffected**: it keeps its plain-text, Word-ready
+  `(Author, Year)` citations with **no hyperlinks** (format rule 4).
+- Inline **quotes** keep their rule-1 treatment (highlighted span, woven into the sentence,
+  bold link to the exact-passage deep link). An author-date citation may sit alongside the
+  quote link; it does not replace it.
+
+---
+
 ## End-to-end workflow
 
 Do these in order. Idempotent and resumable throughout.
@@ -622,7 +675,11 @@ PART II — Scholarly Synthesis (Deep-Linked)
   Navigable TOC of INTERNAL <a href="#sec-N"> links over numbered sections, each with a
   stable <h2 id="sec-N"> anchor. Then the multi-section narrative: EVERY quotation is an
   INLINE highlighted span woven into the prose — a BOLD link to its bookends:// exact-
-  passage deep link, never a detached block-quote. A reasoned conclusion.
+  passage deep link, never a detached block-quote. IN-TEXT CITATIONS ARE AUTHOR-DATE
+  (APA-like) BY DEFAULT — (Jones et al, 2015) / (Jones & Smith, 2015) / (Jones, 2015),
+  semicolon-separated when several, "Jones et al (2015) found…" for narrative mentions —
+  and EACH ONE IS ITSELF A LIVE LINK to that source's highlighted-passage deep link
+  (R-BOOKENDS-NARRATIVE-CITE-STYLE-01). A reasoned conclusion.
 Academic Summary  — flowing narrative synthesizing ALL positions with in-text
                     (Author, Year) citations as PLAIN TEXT (no hyperlinks); Word-ready
                     Rich Text.

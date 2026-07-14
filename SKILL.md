@@ -781,6 +781,15 @@ citation is correct (per *Standing rules*).
          one Bookends link is a FAILURE.
       3. **Cross-nav links intact** — the top-of-report `x-devonthink-item://<group-uuid>`
          (Source DEVONthink group) and the Bookends report-folder group link are both present.
+      4. **EVERY distinct link is fired — enumerated from the SHIPPED FILE**
+         (R-BOOKENDS-VERIFY-EVERY-01). `probes == distinct links`; report both counts. A pass
+         obtained against a *different* object than the one that shipped is a FALSE PASS and
+         fails the run.
+      5. **Group links are verified by READING THE WINDOW, not by AppleScript**
+         (R-BOOKENDS-NO-APPLESCRIPT-GROUP-VERIFY-01): park on a known group with a known ref
+         count, fire, screenshot, and require the displayed group AND the ref count to change.
+         Pass the evidence to `--group-nav-log`. `selected publication items` is stale after a
+         `/group/` URL and is BANNED as evidence; an `open` exit code of 0 is never evidence.
       If any assertion fails, STOP and rewrite the offending links before shipping. Do this as a
       scripted grep/count over the HTML and a `pypdf` `/Annots` dump over the PDF — not by eye.
     - **MANDATORY post-attach non-blank / renders-content verification — REQUIRED; the run
@@ -893,6 +902,125 @@ public-literature run ("Is Surgery Effective for Low Back Pain?") with no PHI.
 > `…/selection/…` is a **fabricated route that does not exist** and is BANNED.
 > `…/group/…` and `…/ref/…` are real.
 
+## R-BOOKENDS-VERIFY-EVERY-01 — a check must exercise the artifact in question, not a cousin of it
+
+> **The rule.** Verify **EVERY DISTINCT link / artifact actually shipped**, enumerated
+> **from the SHIPPED FILE** (the finished HTML, the attached PDF's link annotations, the
+> DEVONthink record) — not from the generator's intentions, not from a sample, not from a
+> representative, and never from a related-but-different object. **If the shipped file
+> contains N distinct `bookends://` links, fire N.** If it contains N distinct group links,
+> fire N group links. If it cites N sources, check N attachments.
+>
+> **"I checked one and it worked" is not evidence about the others.** One link passing says
+> exactly one thing: that link passes. It says nothing about the other 87, which were
+> produced by the same code path only in the agent's imagination.
+>
+> **A passing check on the wrong object is WORSE than no check at all.** No check leaves
+> honest uncertainty. A check that passes against a cousin of the artifact manufactures
+> false confidence, gets written into the report-back as "verified", and ships the bug with
+> a certificate attached.
+>
+> **Operational form (all mandatory):**
+> - **Enumerate from the artifact.** Parse the shipped file and collect the set of distinct
+>   links/objects. Never enumerate from the code that generated it, or from memory of what
+>   you meant to emit.
+> - **Probe the whole set.** No sampling, no "spot check", no "representative example". The
+>   probe count MUST equal the distinct-artifact count, and the report-back MUST state both
+>   numbers (`88 distinct group links found, 88 fired, 88 observed`). A verification claim
+>   without those two numbers is not a verification claim.
+> - **Name the object you tested, in the claim.** Not "group links verified" but "the
+>   *report's own* header group link verified". If the sentence you are about to write does
+>   not name the exact object, you do not yet know what you tested.
+> - **Ask before every check: could this pass while the actual defect is present?** If yes,
+>   the check is worthless as written — fix the check first, then run it.
+>
+> **Three worked examples — all real, all the same failure shape, all on one day:**
+>
+> 1. **The check tested a cousin.** The generator hardcoded a module-level constant for the
+>    group segment, so **all 88 per-source "Bookends Group" links across 29 sources pointed
+>    at the report's own `Reports` folder** instead of each source's subtopic group. The
+>    pre-ship check fired the **report's own group link** — which *correctly* points at
+>    `Reports` — saw it land on `Reports`, and declared **"group links verified."** The claim
+>    was TRUE and WORTHLESS: it never touched a single one of the 29 citation links it was
+>    taken to have covered. Reading the objects out of the shipped HTML (88 links, of which
+>    exactly 1 was the header link) would have exposed it instantly.
+>
+> 2. **The check tested the wrong failure mode.** A pre-ship check reported **"passed: 0 bare-id
+>    links, 0 `/selection/` links."** True — and irrelevant, because neither of those was the
+>    form that was broken. The broken links were **well-formed `/group/` links pointing at the
+>    wrong group**: a class the check never looked at. Scanning for the failures you already
+>    fixed, while the live defect sits in a form you did not scan, is not a check. It is a
+>    ritual.
+>
+> 3. **The check tested the link, not the paper** (**R-BOOKENDS-ATTACHMENT-PROVENANCE-01**).
+>    A citation link was well-formed, carried a real attachmentID, resolved with no error, and
+>    **passed observed navigation** — while opening the **WRONG PAPER**, because the reference
+>    carried a stray first attachment. Every link-level check passed. The artifact under
+>    question was never *the link*; it was *the paper the link opens*.
+>
+> These are one bug wearing three hats. **Same family: R-BOOKENDS-ATTACHMENT-PROVENANCE-01.**
+> The pattern to recognise is not "group links can be wrong" — it is: *the check and the
+> defect were about different objects, and the check passed anyway.*
+>
+> **Enforcement:** `scripts/validate_bookends_links.py` enumerates links from the shipped
+> surfaces and probes every distinct one; it requires a `--group-map` (refID → subtopic group,
+> written at step 5) and FAILS if the per-source group links do not resolve, one-for-one, to
+> the group each source was actually filed into — including the specific fingerprint of this
+> bug: **every per-source group link identical, or pointing at the `Reports` folder.**
+
+## R-BOOKENDS-NO-APPLESCRIPT-GROUP-VERIFY-01 — AppleScript CANNOT verify Bookends group navigation
+
+> **BANNED, by name: using AppleScript to verify that a `bookends://…/group/…` link
+> navigated.** Bookends' AppleScript dictionary exposes **NO property for the
+> currently-displayed group.** There is nothing to ask. In particular, reading
+> **`selected publication items`** (or any other selection/list property) *after* firing a
+> `/group/` URL returns a **STALE selection from before the call** — it reports success no
+> matter what the URL did, **or whether it did anything at all**. It is a silently-lying
+> verification path: it cannot distinguish "navigated to the right group", "navigated to the
+> wrong group", and "did nothing". Any group-link verdict resting on it is void, regardless
+> of how confident the transcript sounds.
+>
+> **The required procedure — READ THE WINDOW.** Group navigation is verified by *looking at
+> the screen*, and only that way:
+> 1. **Park Bookends on a known state with a known reference count** — e.g. select `All`,
+>    showing N references. Record the group name and N. (Park somewhere that is NOT the
+>    group under test; parking on the target makes the "right group is showing" observation
+>    true before the URL was ever fired.)
+> 2. **Fire the URL.**
+> 3. **READ THE WINDOW — take a screenshot** and read back (a) the **displayed group** and
+>    (b) the **displayed reference count**.
+> 4. **Correct navigation MUST change BOTH.** The displayed group must be the group the URL
+>    named, and **the reference count must change from N.** **The count change is the proof.**
+>    Same group as parked, or an unchanged count, is a FAIL — it means nothing happened, or
+>    something happened somewhere you cannot see.
+> 5. Record the observation (parked group + parked count → observed group + observed count,
+>    plus the screenshot path) in the group-navigation evidence log, and hand it to
+>    `scripts/validate_bookends_links.py --group-nav-log`. **The validator refuses to pass any
+>    `/group/` link without that evidence** — it will not fall back to AppleScript, and it will
+>    not pass a group link because firing it raised no alert.
+>
+> **What AppleScript CAN still verify (this path is sound — keep it).** PDF / citation links
+> are legitimately verifiable through AppleScript, because Bookends *does* expose the state
+> the action changes: after firing a `…/pdf/…` link, `name of displayed PDF` and
+> **`link to displayed PDF`** report the PDF and the page Bookends **actually** navigated to,
+> and `selected publication items` reports the reference a `…/ref/…` link actually selected.
+> Those readbacks are refreshed by the action, so they are evidence. **Group links have no
+> such property. Do not analogise from one to the other.**
+>
+> **The general lesson — exit codes are never evidence; stale readbacks are never evidence.**
+> An `open` call returns **exit 0 even when Bookends throws an error dialog** and does nothing.
+> A success exit code means the URL was handed to macOS, not that anything correct happened.
+> So every verification must read back **OBSERVED STATE that could only be true if the action
+> succeeded** — and, before trusting that readback, **the reader must confirm the state it is
+> reading is actually REFRESHED by the action, and not cached / stale from before it.**
+>
+> **The null test (run it once per verification channel, before relying on the channel).**
+> Park on a known-wrong state, then **read the channel WITHOUT firing anything.** If the
+> readback still reports the expected/"successful" value, the channel is stale or cached and
+> **verifies nothing** — discard it and find a channel that changes. This is precisely the test
+> `selected publication items` fails for group links, and precisely the test
+> `link to displayed PDF` passes for PDF links.
+
 ### Pre-ship checks (all fatal — `scripts/validate_bookends_links.py`,
 `scripts/validate_bookends_attachment.py`)
 
@@ -948,3 +1076,30 @@ public-literature run ("Is Surgery Effective for Low Back Pain?") with no PHI.
      absolute/HFS-colon path (`:Users:…`), which Bookends cannot resolve;
    - the PDF still carries its **`bookends://` link annotations**.
    The HTML render may remain as a **secondary** attachment. Never delete it; supersede it.
+
+7. **R-BOOKENDS-VERIFY-EVERY-01 — every distinct shipped link is fired, enumerated from the
+   SHIPPED FILE** (`scripts/validate_bookends_links.py`, FATAL). Parse the finished HTML and
+   the attached PDF's link annotations, collect the **distinct** `bookends://` links, and probe
+   **all** of them — `probes == distinct links`, both numbers reported. **No sampling, no
+   representative link, no "the one I checked worked."** A check that passes against a
+   *different* object than the one that shipped (the report's own header link standing in for
+   the 29 citation links; a scan for `/selection/` links when the broken form was `/group/`)
+   is a FALSE PASS and is treated as a failed run. Pass `--group-map PAGEMAP.json`
+   (refID → the subtopic group the source was filed into at step 5); the validator FAILS if the
+   per-source group links do not map one-for-one onto those groups — including the fingerprints
+   **all per-source group links identical** and **per-source group link pointing at the
+   `Reports` folder**.
+
+8. **R-BOOKENDS-NO-APPLESCRIPT-GROUP-VERIFY-01 — group links are verified by READING THE
+   WINDOW, never by AppleScript** (`scripts/validate_bookends_links.py --group-nav-log`,
+   FATAL). Bookends exposes **no** displayed-group property; `selected publication items` read
+   after firing a `/group/` URL returns a **stale** pre-call selection and reports success
+   unconditionally. For **each distinct** group link: park on a known group with a known
+   reference count, fire the URL, **screenshot the window**, and require **both** the displayed
+   group **and** the reference count to change to the expected group — **the count change is the
+   proof**. Supply the evidence log (`--group-nav-log`); the validator will not pass a group link
+   without it, and "fired, no alert appeared" is **not** a pass. **An `open` exit code of 0 is
+   never evidence** — Bookends returns it while throwing an error dialog. Every check must read
+   back observed state that could only be true if the action succeeded, and must first prove that
+   state is refreshed by the action rather than cached from before it (the null test:
+   read the channel *without* firing — if it still says "success", the channel verifies nothing).

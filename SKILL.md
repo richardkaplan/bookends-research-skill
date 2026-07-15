@@ -377,7 +377,7 @@ The report MUST follow these six rules exactly.
    section links in the Academic Summary or References; the Academic Summary stays Word-ready plain text, while the References list carries only the rule-6 links (web citation + Bookends Group + Bookends Citation), not `#sec-N` anchors.
 
 6. **R-BOOKENDS-DUAL-LINK-01 — every citation carries THREE affordances: a web citation
-   link plus TWO clearly-labeled Bookends links.** The single ambiguous "Open in Bookends"
+   link plus TWO clearly-labeled Bookends links.** **ENFORCED by a mandatory pre-ship gate — `scripts/validate_duallink.py` — which FAILS the run if any per-source entry (Summary/Source-type table row, per-article card, or References entry) is missing its group-name link or its citation link, or if a group link's anchor text is not the containing group's own name (R-BOOKENDS-GROUP-LINK-LABEL-01); see step 7. This closes the 2026-07-14 regression where the group-name link was dropped from the table and References and demoted to a separate line on the cards.** The single ambiguous "Open in Bookends"
    tag is **RETIRED** (user request, 2026-07-11). In BOTH the Part I per-article cards, the
    Summary / Source-type table, and the References (Vancouver) list — **anywhere a
    per-source link is emitted** — render each source with:
@@ -922,6 +922,26 @@ citation is correct (per *Standing rules*).
       ship. This gate closes the 2026-07-14 large-table regression, where a large 31-row table was silently
       compressed (titles abbreviated, findings reduced to labels) because the spec previously said only
       "title = web link" and "one-sentence summary".
+    - **MANDATORY Part I DUAL-LINK gate — REQUIRED; the run FAILS otherwise
+      (R-BOOKENDS-DUAL-LINK-01 / R-BOOKENDS-GROUP-LINK-LABEL-01).** Run
+      `python3 scripts/validate_duallink.py <report.html>`. For EVERY per-source entry — each
+      Summary/Source-type table row, each per-article card, and each References entry — it asserts:
+      1. **Both Bookends links are present, inline and side by side** — a subtopic GROUP link
+         (`…/group/<Library>/<encoded group>`) AND a citation link
+         (`…/pdf/<Library>/<refID>/<attachmentID>/<page0>`). A citation link with no adjacent group
+         link within the same entry is a FAILURE — this is the 2026-07-14 regression, where the
+         group-name link was dropped from the Summary/Source-type table and the References list and
+         demoted to a separate "Filed in" line on the cards.
+      2. **The group link's anchor text IS the containing group's own name**
+         (R-BOOKENDS-GROUP-LINK-LABEL-01) — verified generically by requiring the visible text to
+         equal the URL-decoded group name in its own href. A generic label ("Bookends Group",
+         "Group", "Open in Bookends") on the group link is a FAILURE.
+      3. **The per-source group link points at the source's OWN subtopic group, never the Reports
+         group.**
+      If any assertion fails, STOP, add the missing group-name link (or fix its anchor text), and
+      regenerate — do NOT ship. This is the enforcement half of R-BOOKENDS-DUAL-LINK-01, which the
+      spec previously only described (the third same-shape regression closed by a gate on 2026-07-14,
+      alongside the title-fullness and finding-detail gates).
     - **MANDATORY post-attach non-blank / renders-content verification — REQUIRED; the run
       is NOT done until it passes.** A PDF can carry valid link annotations yet still render
       visually **BLANK** (this happened: a report went into Bookends as a ~1.9 MB file with
@@ -1395,8 +1415,7 @@ result: **the specific result + the effect size and its DIRECTION + the study po
 relevance to the subject of the report**, written as one or two complete sentences. Bare fragments —
 *"HR 1.64"*, *"baseline"*, *"smoking bad"* — are a FAILURE.
 - **Bad:** `All-cause mortality HR 1.64`
-- **Good:** `Retrospective cohort of chronic non-cancer pain patients: starting a long-acting opioid (the
-  regimen class this claimant is on) was associated with 1.64× higher all-cause mortality (HR 1.64,
+- **Good:** `Retrospective cohort of chronic non-cancer pain patients: starting a long-acting opioid was associated with 1.64× higher all-cause mortality (HR 1.64,
   95% CI 1.26–2.12; 68.5 excess deaths/10,000 person-years) vs analgesic anticonvulsants/antidepressants,
   with excess cardiovascular/out-of-hospital deaths beyond overdose.`
 The per-article card summary (rule 1) weaves a highlighted deep-linked quote; this table finding states the

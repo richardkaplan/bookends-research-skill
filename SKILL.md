@@ -719,11 +719,10 @@ Executive Summary — up-front bottom-line (4–8 sentences): what the evidence 
                     (PMC / open-access) work everywhere."
 PART I — Literature Package
   Introduction    — topic framing + the stance legend
-  Summary / Source-type Table — Article (title = BOLD web link → DOI/PMID/URL, PLUS the mandatory
-                    dual pair "· Bookends Group · Bookends Citation" — R-BOOKENDS-DUAL-LINK-01) · one-sentence
-                    summary · Journal · Year · Source type (guideline / systematic
+  Summary / Source-type Table — Article (title = the COMPLETE, VERBATIM published title, NEVER truncated/abbreviated/paraphrased/ellipsed — R-BOOKENDS-FULL-TITLE-01 — as a BOLD web link → DOI/PMID/URL, PLUS the mandatory
+                    dual pair "· Bookends Group · Bookends Citation" — R-BOOKENDS-DUAL-LINK-01) · a DETAILED finding — the specific result + effect size/direction + study population + relevance, one or two full sentences, NEVER a bare label such as "HR 1.64" (R-BOOKENDS-TABLE-FINDING-01) · Journal · Year · Source type (guideline / systematic
                     review / RCT / etc.) · Stance pill + a tally line
-  Article-by-Article Summaries — one card per paper: title + stance pill, full citation
+  Article-by-Article Summaries — one card per paper: the COMPLETE VERBATIM title (R-BOOKENDS-FULL-TITLE-01) + stance pill, full citation
                     (citation & title = BOLD web link → DOI/PMID/URL, PLUS "· Bookends Group · Bookends Citation"), a 3–5
                     sentence factual summary with 1–3 HIGHLIGHTED, deep-linked verbatim
                     quotes WOVEN INLINE (never stacked). Abstract-only sources flagged.
@@ -905,6 +904,24 @@ citation is correct (per *Standing rules*).
          `/group/` URL and is BANNED as evidence; an `open` exit code of 0 is never evidence.
       If any assertion fails, STOP and rewrite the offending links before shipping. Do this as a
       scripted grep/count over the HTML and a `pypdf` `/Annots` dump over the PDF — not by eye.
+    - **MANDATORY Part I TITLE-FULLNESS & FINDING-DETAIL gate — REQUIRED; the run FAILS otherwise
+      (R-BOOKENDS-FULL-TITLE-01 / R-BOOKENDS-TABLE-FINDING-01).** Run
+      `python3 scripts/validate_titles.py <report.html>` (optionally `--titles titles.json`, a map of
+      each source to its verbatim Bookends/published title). It asserts ALL of:
+      1. **No ellipsis in any title** — no source-title anchor text contains "…" or "..." (a
+         truncation marker).
+      2. **Table title == card title** for every source — the Summary/Source-type table Source-cell
+         title and the per-article card heading must be the SAME complete verbatim title, so a table
+         title that is a shortened form of the card title is a FAILURE.
+      3. **No title is a shortening of the real title** — with a titles map supplied, every rendered
+         title must equal the source's actual title verbatim (case/whitespace-normalized), never a
+         prefix, subset, or paraphrase.
+      4. **Every table finding cell is a real finding** — at least ~12 words and a full sentence,
+         not a bare statistic or label ("HR 1.64", "baseline").
+      If any assertion fails, STOP, rewrite the offending titles/findings, and regenerate — do NOT
+      ship. This gate closes the 2026-07-14 large-table regression, where a large 31-row table was silently
+      compressed (titles abbreviated, findings reduced to labels) because the spec previously said only
+      "title = web link" and "one-sentence summary".
     - **MANDATORY post-attach non-blank / renders-content verification — REQUIRED; the run
       is NOT done until it passes.** A PDF can carry valid link annotations yet still render
       visually **BLANK** (this happened: a report went into Bookends as a ~1.9 MB file with
@@ -1357,3 +1374,31 @@ length is capped by Settings → *Number of recent libraries shown*). A library 
 Recents will not auto-open, and the link fails silently. That conditionality is why the report must
 name the library rather than relying on Bookends to sort it out.
 
+## R-BOOKENDS-FULL-TITLE-01 — every source title is the COMPLETE, VERBATIM published title
+
+Anywhere a source title is rendered — the **Summary / Source-type table**, the **per-article cards**,
+and the **References** list — reproduce the FULL published title exactly as it appears in the source
+(pull it verbatim from the Bookends `title` field or the verified published title). **NEVER** truncate,
+abbreviate, paraphrase, summarize, re-case into a "cleaner" short form, or ellipsis-elide ("…" / "...")
+a title. A long title is not a problem — let the row grow. This rule bites hardest in the
+Summary / Source-type table: the pressure to keep a large table compact is exactly what caused the
+**large-table title regression (2026-07-14)**, where a 31-row table shortened titles such as *"Body-mass index and
+all-cause mortality: individual-participant-data meta-analysis of 239 prospective studies in four
+continents"* down to *"BMI & all-cause mortality: IPD meta-analysis of 239 studies"*. That is a FAILURE.
+The table title and the card title for the same source MUST be identical, complete titles. Enforced by the
+pre-ship gate in step 7 (`scripts/validate_titles.py`).
+
+## R-BOOKENDS-TABLE-FINDING-01 — the Summary / Source-type table finding column is a DETAILED finding
+
+The finding column is **not** a label or a bare statistic. Each cell must convey the study's actual key
+result: **the specific result + the effect size and its DIRECTION + the study population/design + the
+relevance to the subject of the report**, written as one or two complete sentences. Bare fragments —
+*"HR 1.64"*, *"baseline"*, *"smoking bad"* — are a FAILURE.
+- **Bad:** `All-cause mortality HR 1.64`
+- **Good:** `Retrospective cohort of chronic non-cancer pain patients: starting a long-acting opioid (the
+  regimen class this claimant is on) was associated with 1.64× higher all-cause mortality (HR 1.64,
+  95% CI 1.26–2.12; 68.5 excess deaths/10,000 person-years) vs analgesic anticonvulsants/antidepressants,
+  with excess cardiovascular/out-of-hospital deaths beyond overdose.`
+The per-article card summary (rule 1) weaves a highlighted deep-linked quote; this table finding states the
+result in plain prose. The two are complementary, and both must be substantive. Enforced by the pre-ship
+gate in step 7 (`scripts/validate_titles.py`).
